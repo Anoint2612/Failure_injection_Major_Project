@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s # Fast scraping for real-time chaos data
+
+scrape_configs:
+  - job_name: 'microservices'
+    static_configs:
+      - targets: ['api-gateway:8000', 'auth-service:8001', 'data-service:8002']

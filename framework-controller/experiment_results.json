@@ -1,0 +1,27 @@
+[
+    {
+        "request": 1,
+        "latency": 6.029864311218262,
+        "status": 200
+    },
+    {
+        "request": 2,
+        "latency": 7.951771020889282,
+        "status": 200
+    },
+    {
+        "request": 3,
+        "latency": 6.0332465171813965,
+        "status": 200
+    },
+    {
+        "request": 4,
+        "latency": 6.023741960525513,
+        "status": 200
+    },
+    {
+        "request": 5,
+        "latency": 6.029146671295166,
+        "status": 200
+    }
+]
