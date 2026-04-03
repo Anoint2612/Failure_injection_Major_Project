@@ -51,3 +51,24 @@ def recover_latency(service_name: str):
         return {"status": "success", "action": f"Removed latency from {service_name}"}
     except Exception as e:
         return {"status": "already_clean", "detail": "No latency rules found to remove"}
+@app.post("/inject/stress/{service_name}")
+def inject_stress(service_name: str, cpu: int = 1, timeout: int = 30):
+    """Exhausts CPU/RAM using stress-ng."""
+    try:
+        container = client.containers.get(f"target-app-{service_name}-1")
+        # Ensure stress-ng is installed in your Dockerfile (similar to iproute2)
+        cmd = f"stress-ng --cpu {cpu} --timeout {timeout}s"
+        container.exec_run(cmd, detach=True)
+        return {"status": "success", "action": f"Injected CPU stress on {service_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/recover/stress/{service_name}")
+def recover_stress(service_name: str):
+    """Kills any running stress-ng processes in the container."""
+    try:
+        container = client.containers.get(f"target-app-{service_name}-1")
+        # 'pkill' is the cleanest way to stop stress-ng immediately
+        container.exec_run("pkill stress-ng")
+        return {"status": "success", "action": f"Terminated stress-ng on {service_name}"}
+    except Exception as e:
+        return {"status": "info", "detail": "No active stress processes found."}

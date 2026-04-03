@@ -45,6 +45,42 @@ def run_chaos_test():
     with open("experiment_results.json", "w") as f:
         json.dump(results, f, indent=4)
     print("\n[SUCCESS] Results saved to experiment_results.json")
+def run_stress_test():
+    results = []
 
+    print("\n--- STEP 1: INJECTING CPU STRESS (2 Workers) ---")
+    requests.post(f"{CONTROLLER_URL}/inject/stress/data-service?cpu=2&timeout=60")
+    
+    print("--- STEP 2: MEASURING IMPACT ---")
+    for i in range(1, 4):
+        start = time.time()
+        try:
+            res = requests.get(GATEWAY_URL, timeout=10)
+            latency = time.time() - start
+            print(f"Request {i}: Latency = {latency:.2f}s | Status = {res.status_code}")
+            results.append({"request": i, "latency": latency, "status": res.status_code})
+        except requests.exceptions.Timeout:
+            print(f"Request {i}: TIMEOUT!")
+            results.append({"request": i, "latency": 10.0, "status": "timeout"})
+        time.sleep(1)
+
+    print("--- STEP 3: RECOVERING FROM STRESS ---")
+    requests.post(f"{CONTROLLER_URL}/recover/stress/data-service")
+
+    # Append to existing JSON
+    with open("experiment_results.json", "r") as f:
+        data = json.load(f)
+
+    # If old format (list), convert it
+    if isinstance(data, list):
+        data = {"latency_test": data}
+
+    data["stress_test"] = results
+
+    with open("experiment_results.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+    print("\n[SUCCESS] Stress results added")
 if __name__ == "__main__":
     run_chaos_test()
+    run_stress_test()
