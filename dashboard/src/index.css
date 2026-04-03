@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #09090b;
+  --color-surface: #18181b;
+  --color-border: #27272a;
+  --color-primary: #3b82f6;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-white antialiased;
+  }
+}
+
+.glass-panel {
+  @apply bg-surface/80 backdrop-blur-md border border-border rounded-xl shadow-2xl;
+}

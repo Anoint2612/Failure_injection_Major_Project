@@ -1,0 +1,25 @@
+{
+  "title": "System Degradation Index & MTTR",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Gateway End-to-End Latency",
+      "targets": [
+        {
+          "expr": "rate(gateway_latency_seconds_sum[1m]) / rate(gateway_latency_seconds_count[1m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Gateway Requests Error Rate",
+      "targets": [
+        {
+          "expr": "rate(gateway_requests_total{status=\"503\"}[1m]) / rate(gateway_requests_total[1m])",
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}

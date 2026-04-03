@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8000']
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:8000']
+  - job_name: 'data-service'
+    static_configs:
+      - targets: ['data-service:8000']

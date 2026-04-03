@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ==============================
+  # CONTROL PLANE
+  # ==============================
+  controller:
+    build: ./controller
+    ports:
+      - "8080:8080"
+    networks:
+      - chaos-net
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+
+  # ==============================
+  # DATA PLANE (INTELLIGENT AGENT)
+  # ==============================
+  agent:
+    build: ./agent
+    depends_on:
+      - controller
+    networks:
+      - chaos-net
+    environment:
+      - CONTROLLER_URL=http://controller:8080/api/v1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Grants dynamic discovery
+      - /proc:/host/proc:ro # Grants psutil OS discovery
+    privileged: true # Grants `tc` network traffic control capability
+
+  # ==============================
+  # GOVERNANCE UI
+  # ==============================
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "5173:5173"
+    networks:
+      - chaos-net
+    depends_on:
+      - controller
+
+  # ==============================
+  # TARGET MICROSERVICE SYSTEM
+  # ==============================
+  auth-service:
+    build: ./target-app/auth-service
+    networks:
+      - chaos-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  data-service:
+    build: ./target-app/data-service
+    networks:
+      - chaos-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  gateway:
+    build: ./target-app/gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-service
+      - data-service
+    networks:
+      - chaos-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ==============================
+  # OBSERVABILITY STACK
+  # ==============================
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./target-app/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9091:9090"
+    networks:
+      - chaos-net
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./target-app/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./target-app/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./target-app/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - chaos-net
+
+networks:
+  chaos-net:
+    driver: bridge
