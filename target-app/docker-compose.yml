@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    networks:
+      - test-net
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8001:8001"
+    networks:
+      - test-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+  data-service:
+    build: ./data-service
+    ports:
+      - "8002:8002"
+    networks:
+      - test-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - test-net
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - test-net
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin    
+
+networks:
+  test-net:
+    driver: bridge

@@ -1,0 +1,46 @@
+{
+    "latency_test": [
+        {
+            "request": 1,
+            "latency": 6.027263402938843,
+            "status": 200
+        },
+        {
+            "request": 2,
+            "latency": 6.037185907363892,
+            "status": 200
+        },
+        {
+            "request": 3,
+            "latency": 6.030162334442139,
+            "status": 200
+        },
+        {
+            "request": 4,
+            "latency": 6.0271265506744385,
+            "status": 200
+        },
+        {
+            "request": 5,
+            "latency": 6.050925254821777,
+            "status": 200
+        }
+    ],
+    "stress_test": [
+        {
+            "request": 1,
+            "latency": 0.0203857421875,
+            "status": 200
+        },
+        {
+            "request": 2,
+            "latency": 0.01865220069885254,
+            "status": 200
+        },
+        {
+            "request": 3,
+            "latency": 0.01706409454345703,
+            "status": 200
+        }
+    ]
+}
