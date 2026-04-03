@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  gateway:
+    build: ./target_app/gateway
+    container_name: fi_gateway
+    ports:
+      - "8001:8000"
+    networks:
+      - test-net
+
+  auth:
+    build: ./target_app/auth
+    container_name: fi_auth
+    ports:
+      - "8002:8000"
+    networks:
+      - test-net
+
+  data:
+    build: ./target_app/data
+    container_name: fi_data
+    ports:
+      - "8003:8000"
+    networks:
+      - test-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fi_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - test-net
+
+networks:
+  test-net:
+    driver: bridge

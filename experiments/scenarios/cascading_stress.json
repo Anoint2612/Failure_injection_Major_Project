@@ -1,0 +1,7 @@
+{
+  "latency_ms": 200,
+  "latency_target": "data",
+  "cpu_exhaustion_percent": 50,
+  "cpu_target": "gateway",
+  "duration": 60
+}
