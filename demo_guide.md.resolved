@@ -1,0 +1,296 @@
+# ChaosController — Project Demonstration Guide
+
+## 1. Project Overview
+
+### What It Is
+ChaosController is an **enterprise-grade chaos engineering platform** that performs controlled failure injection on containerized microservices to test their resilience. It follows the **Chaos Engineering** discipline pioneered by Netflix to proactively identify weaknesses in distributed systems before they cause real outages.
+
+### Core Principle
+> *"The best way to avoid failure is to fail constantly."* — Netflix Engineering
+
+Instead of waiting for production incidents, ChaosController lets engineers **inject faults** (latency, crashes, resource exhaustion) into services **in a controlled environment**, measure the impact, and identify missing resilience mechanisms like timeouts, circuit breakers, and retry policies.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        YOUR MACHINE                             │
+│                                                                 │
+│  ┌─────────────┐     ┌──────────────────────────────────────┐   │
+│  │  Frontend    │     │  Docker Compose Cluster              │   │
+│  │  React+Vite  │     │  ┌────────────┐  ┌──────────────┐   │   │
+│  │  :5173       │────▶│  │api-gateway │──│ auth-service  │   │   │
+│  └──────┬───────┘     │  │   :8000    │  │   :8001      │   │   │
+│         │             │  └────────────┘  └──────────────┘   │   │
+│         │             │        │         ┌──────────────┐   │   │
+│  ┌──────▼───────┐     │        └─────────│ data-service │   │   │
+│  │  Controller  │     │                  │   :8002      │   │   │
+│  │  FastAPI     │─────│  ┌────────────┐  └──────────────┘   │   │
+│  │  :5050       │     │  │ prometheus │  ┌──────────────┐   │   │
+│  └──────────────┘     │  │   :9090    │  │   grafana    │   │   │
+│                       │  └────────────┘  │   :3000      │   │   │
+│                       └──────────────────└──────────────┘───┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Three layers:**
+1. **Target Application** — A microservice-based system (api-gateway → auth-service, data-service) with Prometheus + Grafana monitoring. This simulates any real-world application.
+2. **Chaos Controller (Backend)** — A FastAPI server that uses the **Docker SDK** to discover containers, inject faults via `container.exec_run()`, and measure impact.
+3. **Dashboard (Frontend)** — A React SPA that provides real-time health monitoring, a fault catalog UI, and a 3-phase experiment runner.
+
+---
+
+## 2. Key Technical Talking Points
+
+### 2.1 Target-Agnostic Design
+The controller never hardcodes service names. It uses **Docker Compose labels** (`com.docker.compose.service`) for dynamic service discovery. Point it at any Docker Compose project and it works.
+
+### 2.2 Pluggable Fault Registry
+All 10 fault types are **classes** inheriting from `FaultBase`. Each class defines `inject()`, `recover()`, and `parameters` metadata. Adding a new fault type means adding a single class — zero router changes needed. The frontend renders parameter controls dynamically from the metadata API.
+
+### 2.3 Fault Categories (10 Types)
+
+| Category | Fault | Tool Used | What It Does |
+|----------|-------|-----------|-------------|
+| **Infrastructure** | Container Crash | Docker SDK `stop()` | Simulates entire container failure |
+| **Infrastructure** | Process Kill | `kill -SIGNAL` via `/proc` | Kills the app process without stopping the container |
+| **Network** | Latency | `tc netem delay` | Adds artificial delay to outbound packets |
+| **Network** | Packet Loss | `tc netem loss` | Drops a % of outbound packets randomly |
+| **Network** | Bandwidth Throttle | `tc tbf` | Limits outbound bandwidth to kbit/s |
+| **Network** | Network Partition | `iptables DROP` | Blocks traffic to/from a specific service |
+| **Network** | DNS Failure | `/etc/resolv.conf` | Breaks DNS name resolution inside container |
+| **Resource** | CPU Stress | `stress-ng --cpu` | Saturates CPU with worker threads |
+| **Resource** | Memory Stress | `stress-ng --vm` | Allocates and locks memory |
+| **Resource** | Disk I/O Stress | `stress-ng --hdd` | Generates heavy disk I/O |
+
+### 2.4 3-Phase Scientific Experiment
+The experiment runner follows the chaos engineering scientific method:
+1. **Baseline** — Measure normal response latency (5 requests)
+2. **Inject & Measure** — Apply the fault, then measure impact (5 requests)
+3. **Recover & Verify** — Remove the fault, confirm system returns to normal (5 requests)
+
+### 2.5 Container-Safe Execution
+All commands (`tc`, `iptables`, `stress-ng`, `kill`) execute inside Docker containers via `container.exec_run()`. The host machine is never affected. Containers have `cap_add: NET_ADMIN` and `privileged: true` to allow kernel-level network manipulation.
+
+---
+
+## 3. Pre-Demo Setup Checklist
+
+Run these steps **30 minutes before** the demo to ensure everything is warm.
+
+```bash
+# 1. Start the target application
+cd target-app
+docker compose up --build -d
+
+# 2. Verify containers are running (expect 5: api-gateway, auth-service, data-service, prometheus, grafana)
+docker ps
+
+# 3. Verify health endpoints
+curl http://localhost:8000/health   # → {"status":"healthy","service":"api-gateway"}
+curl http://localhost:8001/health   # → {"status":"healthy","service":"auth-service"}
+curl http://localhost:8002/health   # → {"status":"healthy","service":"data-service"}
+
+# 4. Start the Chaos Controller backend
+cd ../framework-controller
+source venv/bin/activate
+uvicorn main:app --host 0.0.0.0 --port 5050 --reload
+
+# 5. Start the frontend
+cd ../frontend
+npm run dev
+
+# 6. Open browser tabs:
+#    - http://localhost:5173       (Dashboard)
+#    - http://localhost:8000/dashboard  (Target app — to show it working)
+#    - http://localhost:3000       (Grafana — optional, for metrics)
+```
+
+> **IMPORTANT**: Verify api-gateway has `NET_ADMIN` capability. If `tc` commands fail silently, add `cap_add: NET_ADMIN` and `privileged: true` to docker-compose.yml for api-gateway.
+
+---
+
+## 4. Demo Script (Recommended Flow)
+
+### Demo 1: Dashboard Overview & Service Discovery (~2 min)
+
+**What to show:** Open the dashboard at `http://localhost:5173`
+
+**Walk the audience through:**
+1. **Status strip** at the top — real-time health check for all 5 containers with latency in milliseconds
+2. **Target selector** in the sidebar — these were discovered dynamically via Docker labels
+3. **Fault catalog** — 10 fault types across 3 categories, each with configurable parameters
+4. **Event log** — timestamped activity trail
+
+**What to say:**
+> "The dashboard auto-discovers all services in the Docker Compose cluster. It polls their health endpoints every 3 seconds. Notice the latency values — that's the actual round-trip time to each service right now. We have 10 fault types organized into Infrastructure, Network, and Resource categories."
+
+**Expected result:** All 5 services show green dots and latency values between 5–20ms. The fault catalog renders all 10 fault types with their parameter controls.
+
+---
+
+### Demo 2: Container Crash & Recovery (~2 min)
+
+**Steps:**
+1. Select **auth-service** in the sidebar
+2. Open a separate terminal — run: `curl http://localhost:8000/dashboard` (should return user + data JSON)
+3. In the dashboard, find "Crash" under INFRASTRUCTURE → click **INJECT**
+4. Show the status strip — auth-service should go red/DOWN
+5. Run the curl again — it will fail (api-gateway can't reach auth-service)
+6. Click **RECOVER** on the Crash card
+7. Wait 3–5 seconds — auth-service comes back green
+8. Run curl again — it works
+
+**Expected result:**
+
+| State | `curl localhost:8000/dashboard` | Status Strip |
+|-------|-------------------------------|--------------|
+| Before | `{"user":{...},"data":{...},"status":"Success"}` | All green |
+| During crash | Connection error / 500 | auth-service = DOWN (red) |
+| After recover | Same as before | All green |
+
+**What to say:**
+> "This simulates a complete container crash. In production, this tests whether your orchestration layer (Kubernetes, ECS) correctly detects the failure and reschedules the pod. Notice that api-gateway returns a 500 — it has no error handling for a missing dependency."
+
+---
+
+### Demo 3: Latency Injection — The Key Demo (~5 min)
+
+> This is your **strongest demo**. It clearly shows measurable impact.
+
+**Steps:**
+1. Select **data-service** in the sidebar  
+2. Set the probe URL to: `http://localhost:8000/dashboard`
+3. Under NETWORK → Latency, set delay to **2000ms**, jitter to **0**
+4. Click **INJECT** → event log confirms injection
+5. Click **LATENCY TEST** in the sidebar experiment section
+6. Wait for results — they appear in 3 phases
+
+**Expected result:**
+
+| Phase | Avg Latency | Status | Why |
+|-------|-------------|--------|-----|
+| BASELINE | ~0.003–0.010s | 200 | Normal. No fault applied. |
+| DURING FAULT | ~2.005–2.015s | 200 | `tc netem` adds exactly 2000ms to every packet leaving data-service. api-gateway's call to data-service goes through the Docker bridge network and hits the rule. |
+| POST RECOVERY | ~0.003–0.010s | 200 | tc rules removed. Back to normal. |
+
+**What to say:**
+> "This is the scientific method of chaos engineering. We establish a baseline, inject the fault, measure the impact, then recover and verify restoration. The 2-second delay is precisely what we injected — proving the fault is working at the kernel level via traffic control."
+>
+> "Notice the system doesn't timeout — it just gets very slow. In production, this means a single slow downstream service can cascade latency through your entire request chain. The correct fix is implementing timeouts and circuit breakers."
+
+**Bonus — increase to 5000ms:**
+1. Change slider to 5000ms → click INJECT again
+2. Click LATENCY TEST
+3. During-fault results should show ~5.0s — or some may show **timeout** (10s limit)
+4. This proves there's **no timeout protection** in the target app
+
+---
+
+### Demo 4: CPU Stress Test (~3 min)
+
+**Steps:**
+1. Select **data-service**
+2. Set probe URL to `http://localhost:8000/dashboard`
+3. Under RESOURCE → CPU Stress, set workers to **4**, timeout to **30s**
+4. Click **INJECT**
+5. Click **STRESS TEST** in sidebar
+
+**Expected result:**
+
+| Phase | Avg Latency | Why |
+|-------|-------------|-----|
+| BASELINE | ~0.005s | Normal |
+| DURING FAULT | ~0.050–0.500s | CPU contention. The application's event loop competes with stress-ng workers for CPU time. |
+| POST RECOVERY | ~0.005s | stress-ng killed. CPU freed. |
+
+**What to say:**
+> "CPU stress simulates the 'noisy neighbor' problem — when another process on the same machine consumes all CPU. In a cloud environment, this happens when a pod shares a node with a resource-intensive workload. The application's response time degrades because the Python event loop can't get CPU time."
+
+---
+
+### Demo 5: Process Kill (~2 min)
+
+**Steps:**
+1. Select **api-gateway**
+2. Under INFRASTRUCTURE → Process Kill → select "SIGKILL (force)" → click **INJECT**
+3. The status strip shows api-gateway going DOWN
+4. Run `curl http://localhost:8000/health` — connection refused
+5. Click **RECOVER** (restarts the container)
+6. Wait ~5s, api-gateway comes back up
+
+**Expected result:** Service goes down immediately and comes back after recovery.
+
+**What to say:**
+> "Process kill is different from a container crash. The container is still running but the application process inside it is dead. This simulates OOM kills, segfaults, or uncaught exceptions. Docker's restart policy determines whether the container auto-recovers."
+
+---
+
+### Demo 6: Light/Dark Mode (Quick, ~15s)
+
+Click the sun/moon icon in the topbar to toggle. Shows the enterprise-quality UI.
+
+---
+
+## 5. Talking Points for Q&A
+
+### "How is this different from just restarting a container?"
+> "Container crash is just one of 10 fault types. The real value is network faults like latency injection and packet loss — these simulate real-world network degradation that's more common than full outages. A service doesn't crash, it just gets slow, which is actually harder to handle."
+
+### "Does this affect the host machine?"
+> "No. Every command executes inside the Docker container via the Docker SDK's `exec_run()` method. The tc rules, iptables modifications, and stress-ng processes exist only within the container's namespace. The host is completely isolated."
+
+### "Can it work with any application?"
+> "Yes. The controller discovers services dynamically using Docker Compose labels. It doesn't know or care what language or framework the target services use. The only requirements are: containers must have `iproute2` and `stress-ng` installed, and they need `NET_ADMIN` capability for network faults."
+
+### "Why do you probe http://localhost:8000/dashboard instead of the target service directly?"
+> "On Docker Desktop (Mac/Windows), `tc netem` rules affect inter-container traffic on the Docker bridge network, but not host-to-container traffic via port mapping. By probing the api-gateway's `/dashboard` endpoint — which internally calls data-service — we ensure the request travels through the Docker network where the tc rules apply."
+
+### "What's the pluggable architecture?"
+> "Each fault is a Python class inheriting from `FaultBase` with `inject()`, `recover()`, and `parameters`. Adding a new fault is one class — no router changes. The frontend dynamically renders controls (sliders, dropdowns, text inputs) from the parameter metadata served by the `/faults` API."
+
+### "What are the real-world use cases?"
+> 1. **Pre-deployment resilience testing** — Verify timeout and retry configurations before deploying to production.
+> 2. **Game days** — Scheduled chaos sessions where teams inject failures and practice incident response.
+> 3. **CI/CD pipeline gates** — Run automated chaos tests as part of the deployment pipeline. If the system can't handle 500ms latency, block the deploy.
+> 4. **Dependency mapping** — Inject faults on individual services to discover hidden dependencies.
+
+---
+
+## 6. Known Limitations (Be Honest If Asked)
+
+| Limitation | Why | Future Work |
+|-----------|-----|-------------|
+| Docker Desktop networking | `tc netem` doesn't affect host→container port-mapped traffic on Mac/Windows | Works correctly on Linux Docker or in production K8s |
+| No persistent experiment history | Results are stored in a single JSON file | Stage 2: SQLite-backed experiment store |
+| No AI-powered analysis | Experiment results require manual interpretation | Stage 3: Gemini API integration for automated root cause analysis |
+| No Kubernetes support | Only works with Docker Compose | Future: Kubernetes operator with CRDs for fault injection |
+
+---
+
+## 7. Emergency Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Services not appearing in dashboard | `docker compose ps` — make sure containers are running |
+| "Container not running" error | The container crashed. Click RECOVER on the Crash card, or run `docker compose restart <service>` |
+| Latency test shows no impact | You're probing the same service you injected on via port mapping. Change probe URL to `http://localhost:8000/dashboard` and inject on `data-service` or `auth-service` |
+| Frontend won't start | `cd frontend && npm install && npm run dev` |
+| Backend crash | `cd framework-controller && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5050` |
+| All containers down | `cd target-app && docker compose up -d` |
+| tc: RTNETLINK answers: Operation not permitted | Missing `cap_add: NET_ADMIN` in docker-compose.yml for that service |
+
+---
+
+## 8. Recommended Demo Order (15-minute Presentation)
+
+| Time | Section | Duration |
+|------|---------|----------|
+| 0:00 | Architecture overview (use the diagram above) | 2 min |
+| 2:00 | Dashboard tour — service discovery, fault catalog, health strip | 2 min |
+| 4:00 | **Demo 3: Latency Injection** — the strongest demo, shows clear measurable impact | 5 min |
+| 9:00 | Demo 2: Container Crash — quick, visual, shows cascade failure | 2 min |
+| 11:00 | Demo 4: CPU Stress — resource exhaustion scenario | 2 min |
+| 13:00 | Technical architecture walkthrough — pluggable registry, Docker SDK | 2 min |
+
+> **Pro tip:** Start with the latency demo. It's the most impressive because it shows actual measured data with clear before/during/after comparison. Save the crash demo for second — it's visually dramatic but simpler to explain.

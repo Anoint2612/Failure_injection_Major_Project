@@ -1,46 +1,90 @@
 {
-    "latency_test": [
+    "baseline": [
         {
             "request": 1,
-            "latency": 6.027263402938843,
-            "status": 200
+            "latency": 10.0,
+            "status": "timeout"
         },
         {
             "request": 2,
-            "latency": 6.037185907363892,
-            "status": 200
+            "latency": 10.0,
+            "status": "timeout"
         },
         {
             "request": 3,
-            "latency": 6.030162334442139,
+            "latency": 7.008,
             "status": 200
         },
         {
             "request": 4,
-            "latency": 6.0271265506744385,
+            "latency": 0.005,
             "status": 200
         },
         {
             "request": 5,
-            "latency": 6.050925254821777,
+            "latency": 0.002,
             "status": 200
         }
     ],
-    "stress_test": [
+    "during_fault": [
         {
             "request": 1,
-            "latency": 0.0203857421875,
+            "latency": 0.912,
             "status": 200
         },
         {
             "request": 2,
-            "latency": 0.01865220069885254,
+            "latency": 0.91,
             "status": 200
         },
         {
             "request": 3,
-            "latency": 0.01706409454345703,
+            "latency": 0.905,
+            "status": 200
+        },
+        {
+            "request": 4,
+            "latency": 0.905,
+            "status": 200
+        },
+        {
+            "request": 5,
+            "latency": 0.904,
             "status": 200
         }
-    ]
+    ],
+    "post_recovery": [
+        {
+            "request": 1,
+            "latency": 0.005,
+            "status": 200
+        },
+        {
+            "request": 2,
+            "latency": 0.003,
+            "status": 200
+        },
+        {
+            "request": 3,
+            "latency": 0.004,
+            "status": 200
+        },
+        {
+            "request": 4,
+            "latency": 0.002,
+            "status": 200
+        },
+        {
+            "request": 5,
+            "latency": 0.003,
+            "status": 200
+        }
+    ],
+    "config": {
+        "target_service": "auth-service",
+        "probe_url": "http://localhost:8001/health",
+        "delay_ms": 900,
+        "num_requests": 5
+    },
+    "test_type": "latency"
 }
