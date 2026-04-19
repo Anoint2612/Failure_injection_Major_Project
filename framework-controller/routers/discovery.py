@@ -42,6 +42,12 @@ async def get_status(project: str = None):
 
         if host_port and svc["status"] == "running":
             health = await check_health("localhost", host_port)
+            # Fallback for when running inside Docker
+            if health["status"] == "down":
+                internal_port = next(iter(svc["ports"].keys())).split("/")[0]
+                health_internal = await check_health(svc["container_name"], int(internal_port))
+                if health_internal["status"] == "up":
+                    health = health_internal
         else:
             health = {"status": "down", "latency_ms": None, "http_code": None}
 

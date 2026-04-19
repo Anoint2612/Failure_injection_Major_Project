@@ -105,13 +105,35 @@ This provides clear comparative data to identify missing resilience mechanisms (
 
 ---
 
-## Quick Start
+## CI/CD Pipeline Integration (Jenkins / Docker)
+
+ChaosController is packaged as a ready-to-use Docker image containing both the backend and frontend. You can easily plug it into Jenkins pipelines to act as an automated resilience testing gate.
+
+→ **[Full Jenkins Integration Guide](docs/JENKINS_INTEGRATION.md)**
+
+```bash
+# Add to your Jenkinsfile or run directly
+docker run -d \
+  --name chaos-controller-ci \
+  --network <your_app_network> \
+  -p 5050:5050 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e GEMINI_API_KEY=${GEMINI_API_KEY} \
+  chaos-controller:latest
+```
+Access the dashboard at `http://localhost:5050`.
+
+---
+
+## Local Development Setup
+
+If you wish to modify the controller or the React frontend, run the components separately on your host machine.
 
 ### Prerequisites
 
 - **Docker** with Docker Compose
 - **Python 3.8+**
-- **Node.js 18+** (for the frontend)
+- **Node.js 18+**
 
 ### 1. Start the Target Application
 
@@ -120,14 +142,7 @@ cd target-app
 docker compose up --build -d
 ```
 
-Verify health:
-```bash
-curl http://localhost:8000/health    # api-gateway
-curl http://localhost:8001/health    # auth-service
-curl http://localhost:8002/health    # data-service
-```
-
-### 2. Start the Chaos Controller
+### 2. Start the Backend API (FastAPI)
 
 ```bash
 cd framework-controller
@@ -137,7 +152,7 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 5050
 ```
 
-### 3. Start the Dashboard
+### 3. Start the Frontend Dashboard (React + Vite)
 
 ```bash
 cd frontend
@@ -145,7 +160,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** — the dashboard auto-discovers all running services.
+Open **http://localhost:5173** — the dashboard will interact with your local backend on port 5050.
 
 ---
 

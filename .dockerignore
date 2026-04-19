@@ -1,0 +1,22 @@
+# Python — recursive pycache exclusion
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+framework-controller/venv/
+framework-controller/experiment_results.json
+framework-controller/*.md
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Git
+.git/
+.gitignore
+
+# Target App (not part of the framework image)
+target-app/
+
+# Misc
+*.env
+.env

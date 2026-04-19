@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import './index.css';
 
-const API = 'http://localhost:5050';
+// Dev mode (Vite on :5173) → call API on :5050
+// Production (served from Docker on :5050) → relative path (same origin)
+const API = window.location.port === '5173'
+  ? 'http://localhost:5050'
+  : '';
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chaos-theme') || 'dark');

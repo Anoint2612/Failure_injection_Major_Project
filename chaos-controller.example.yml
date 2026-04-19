@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────
+# Add this service to your existing docker-compose.yml
+# to run ChaosController alongside your application.
+# ─────────────────────────────────────────────────────────
+
+services:
+  chaos-controller:
+    image: chaos-controller:latest  # or ghcr.io/your-org/chaos-controller
+    ports:
+      - "5050:5050"
+    volumes:
+      # Docker socket access — required for container discovery & fault injection
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on: []  # Add your service names here to ensure they start first
+    restart: unless-stopped
+
+# ─────────────────────────────────────────────────────────
+# IMPORTANT: Your target services need these additions:
+#
+#   services:
+#     your-service:
+#       build: .
+#       cap_add:
+#         - NET_ADMIN
+#       privileged: true
+#
+# And your base Dockerfile must install:
+#   RUN apt-get update && apt-get install -y iproute2 stress-ng
+# ─────────────────────────────────────────────────────────
