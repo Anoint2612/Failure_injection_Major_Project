@@ -1,93 +1,193 @@
-# AI-Powered Resilience Framework
+# ChaosController — Failure Injection Platform
 
-This document provides a step-by-step guide to setting up the **AI-Powered Resilience Framework** from scratch in a WSL/Linux environment, and running the included experiments.
+An enterprise-grade chaos engineering platform for testing the resilience of containerized microservices. Inject controlled faults — network latency, packet loss, CPU stress, container crashes, and more — then measure impact using a structured 3-phase experiment methodology.
 
-***
+---
 
-## 1. System Requirements Check
+## Architecture
 
-Ensure you have the following installed. Run these commands to verify:
-* **Docker**: `docker --version` (Ensure Docker is running. If on Windows, ensure Docker Desktop is running with WSL2 integration ON).
-* **Python**: `python3 --version` (3.8 or higher required).
-* **Gemini API Key**: Obtain from [Google AI Studio](https://aistudio.google.com/).
-
-***
-
-## 2. Infrastructure Setup (Target App)
-
-The target application consists of 3 microservices and a monitoring stack.
-
-1. **Build and Start Containers**:
-   ```bash
-   cd target-app
-   docker compose up --build -d
-   ```
-
-2. **Verify Health**:
-   * API Dashboard: [http://localhost:8000/dashboard](http://localhost:8000/dashboard)
-   * Prometheus Targets: [http://localhost:9090/targets](http://localhost:9090/targets) (All should be green/UP)
-   * Grafana: [http://localhost:3000](http://localhost:3000) (Default login: `admin` / `admin`)
-
-***
-
-## 3. Controller Setup (The "Chaos Engine")
-
-The controller manages the injection and recovery of faults.
-
-1. **Initialize Virtual Environment**:
-   ```bash
-   cd framework-controller
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   *(Alternatively, install manually: `pip install fastapi uvicorn docker google-generativeai requests httpx prometheus-fastapi-instrumentator`)*
-
-3. **Launch the Controller**:
-   ```bash
-   export GEMINI_API_KEY="YOUR_ACTUAL_KEY"
-   uvicorn main:app --host 0.0.0.0 --port 5000
-   ```
-   *(Note: You can also use an `.env` file to store your API key instead of exporting it directly!)*
-
-***
-
-## 4. Running Experiments
-
-Once everything is running, use the provided automation scripts to perform tests. **Ensure your virtual environment is active** before running these scripts.
-
-### A. Run a Resilience Test
-
-This script injects faults (like CPU stress or latency), measures the impact, recovers the service, and saves a JSON result file.
-
-```bash
-python3 run_experiment.py
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         HOST MACHINE                             │
+│                                                                  │
+│  ┌──────────────┐     ┌───────────────────────────────────────┐  │
+│  │  Frontend     │     │   Docker Compose (Target App)         │  │
+│  │  React + Vite │     │  ┌────────────┐   ┌──────────────┐   │  │
+│  │  :5173        │────▶│  │api-gateway │──▶│ auth-service  │   │  │
+│  └──────┬────────┘     │  │   :8000    │   │   :8001       │   │  │
+│         │              │  └─────┬──────┘   └──────────────┘   │  │
+│         │              │        │           ┌──────────────┐   │  │
+│  ┌──────▼────────┐     │        └──────────▶│ data-service │   │  │
+│  │  Controller    │     │                    │   :8002       │   │  │
+│  │  FastAPI       │─────│  ┌────────────┐   └──────────────┘   │  │
+│  │  :5050         │     │  │ prometheus │   ┌──────────────┐   │  │
+│  └───────────────┘     │  │   :9090    │   │   grafana     │   │  │
+│                        │  └────────────┘   │   :3000       │   │  │
+│                        └───────────────────└──────────────┘───┘  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### B. Generate AI Analysis
+**Three layers:**
 
-This script sends the test results to Gemini and generates a Markdown report (`ai_remediation_report.md`).
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Target Application** | FastAPI microservices + Prometheus + Grafana | The system under test — any Docker Compose application |
+| **Chaos Controller** | FastAPI + Docker SDK for Python | Discovers containers, injects faults via `container.exec_run()`, runs experiments |
+| **Dashboard** | React + Vite | Real-time health monitoring, fault catalog, experiment runner with 3-phase results |
 
-```bash
-python3 ai_analyst.py
+---
+
+## Fault Catalog (9 Types)
+
+| Category | Fault | Tool | Description |
+|----------|-------|------|-------------|
+| **Infrastructure** | Container Crash | Docker SDK `stop()/start()` | Full container stop/restart |
+| **Network** | Latency | `tc netem delay` | Adds artificial delay to outbound packets |
+| **Network** | Packet Loss | `tc netem loss` | Drops a % of network packets randomly |
+| **Network** | Bandwidth Throttle | `tc tbf` | Limits outbound bandwidth (kbit/s) |
+| **Network** | Network Partition | `iptables DROP` | Blocks traffic to/from a specific service |
+| **Network** | DNS Failure | `/etc/resolv.conf` | Breaks DNS resolution inside a container |
+| **Resource** | CPU Stress | `stress-ng --cpu` | Saturates CPU with worker threads |
+| **Resource** | Memory Stress | `stress-ng --vm` | Allocates and locks memory blocks |
+| **Resource** | Disk I/O Stress | `stress-ng --hdd` | Generates heavy disk write operations |
+
+All faults are **pluggable classes** inheriting from `FaultBase`. Adding a new fault type requires one class — zero router changes.
+
+---
+
+## Experiment Methodology
+
+The experiment runner follows a 3-phase scientific approach:
+
+```
+Phase 1: BASELINE         → Measure normal latency (5 requests)
+Phase 2: INJECT & MEASURE → Apply fault, measure impact (5 requests)
+Phase 3: RECOVER & VERIFY → Remove fault, confirm restoration (5 requests)
 ```
 
-### C. Generate New Scenarios
+This provides clear comparative data to identify missing resilience mechanisms (timeouts, circuit breakers, retry policies).
 
-Ask Gemini to analyze your architecture and suggest new fault injection tests.
+---
 
-```bash
-python3 scenario_generator.py
+## Project Structure
+
+```
+.
+├── target-app/                     # The application under test
+│   ├── api-gateway/                # Gateway service (port 8000)
+│   ├── auth-service/               # Auth service (port 8001)
+│   ├── data-service/               # Data service (port 8002)
+│   ├── monitoring/                 # Prometheus config
+│   └── docker-compose.yml
+│
+├── framework-controller/           # Chaos engine backend
+│   ├── main.py                     # FastAPI entry point
+│   ├── config.py                   # Environment configuration
+│   ├── routers/
+│   │   ├── injection.py            # POST /inject/{fault}/{service}
+│   │   ├── recovery.py             # POST /recover/{fault}/{service}
+│   │   ├── discovery.py            # GET /status
+│   │   ├── experiments.py          # POST /experiment/run
+│   │   └── metrics.py              # GET /metrics/prometheus
+│   ├── services/
+│   │   ├── fault_library.py        # Pluggable fault registry (9 types)
+│   │   ├── docker_manager.py       # Docker SDK container operations
+│   │   ├── experiment_runner.py    # 3-phase experiment engine
+│   │   └── health_checker.py       # Service health probing
+│   └── requirements.txt
+│
+└── frontend/                       # React dashboard
+    ├── src/
+    │   ├── App.jsx                 # Main dashboard component
+    │   └── index.css               # Design system (dark/light themes)
+    └── index.html
 ```
 
-***
+---
 
-## 5. Troubleshooting
+## Quick Start
 
-* **`tc` command not found**: Ensure `iproute2` is installed in the service Dockerfiles.
-* **`stress-ng` not found**: Ensure `stress-ng` is installed in the service Dockerfiles.
-* **Docker permission denied**: Run `sudo chmod 666 /var/run/docker.sock` in WSL if you are encountering permission issues.
+### Prerequisites
+
+- **Docker** with Docker Compose
+- **Python 3.8+**
+- **Node.js 18+** (for the frontend)
+
+### 1. Start the Target Application
+
+```bash
+cd target-app
+docker compose up --build -d
+```
+
+Verify health:
+```bash
+curl http://localhost:8000/health    # api-gateway
+curl http://localhost:8001/health    # auth-service
+curl http://localhost:8002/health    # data-service
+```
+
+### 2. Start the Chaos Controller
+
+```bash
+cd framework-controller
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 5050
+```
+
+### 3. Start the Dashboard
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173** — the dashboard auto-discovers all running services.
+
+---
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/status` | Live health check for all discovered services |
+| `GET` | `/faults` | Returns the fault catalog with parameter metadata |
+| `POST` | `/inject/{fault_name}/{service}` | Inject a fault (e.g., `/inject/latency/data-service?delay_ms=2000`) |
+| `POST` | `/recover/{fault_name}/{service}` | Remove a fault and restore normal operation |
+| `POST` | `/experiment/run` | Run a 3-phase experiment (baseline → fault → recovery) |
+| `GET` | `/metrics/prometheus` | Fetch Prometheus metrics for a service |
+
+---
+
+## Key Design Decisions
+
+### Container-Native Execution
+All fault commands (`tc`, `iptables`, `stress-ng`, `kill`) execute **inside Docker containers** via `container.exec_run()`. The host machine is never affected.
+
+### Target-Agnostic Discovery
+The controller uses `com.docker.compose.service` labels for dynamic service discovery. It works with **any Docker Compose application** — no configuration needed.
+
+### Docker Desktop Networking
+On Docker Desktop (Mac/Windows), `tc netem` rules affect inter-container traffic on the Docker bridge network but **not** host-to-container port-mapped traffic. Inject faults on a **downstream** service and probe via an **upstream** endpoint to observe latency impact.
+
+### Container Requirements
+Target containers must include:
+- `iproute2` — for `tc` network manipulation
+- `stress-ng` — for resource stress testing
+- `cap_add: NET_ADMIN` and `privileged: true` in docker-compose.yml
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `tc: RTNETLINK answers: Operation not permitted` | Add `cap_add: NET_ADMIN` and `privileged: true` to the service in docker-compose.yml |
+| Services not appearing in dashboard | Verify containers are running: `docker compose ps` |
+| Latency test shows no impact | Probe via an upstream gateway (e.g., `http://localhost:8000/dashboard`), not the target service directly |
+| Health check shows DOWN after latency injection | Expected if delay > health timeout (15s). Click Recover to clear rules |
+| Frontend won't start | Run `cd frontend && npm install && npm run dev` |
+| `stress-ng` not found | Add `RUN apt-get update && apt-get install -y stress-ng` to the target Dockerfile |

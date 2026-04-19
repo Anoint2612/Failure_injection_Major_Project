@@ -1,46 +1,450 @@
-{
-    "latency_test": [
-        {
-            "request": 1,
-            "latency": 6.027263402938843,
-            "status": 200
+[
+    {
+        "baseline": [
+            {
+                "request": 1,
+                "latency": 0.007,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.004,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.003,
+                "status": 200
+            }
+        ],
+        "during_fault": [
+            {
+                "request": 1,
+                "latency": 2.006,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 2.005,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 2.006,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 2.007,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 2.007,
+                "status": 200
+            }
+        ],
+        "post_recovery": [
+            {
+                "request": 1,
+                "latency": 0.006,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.002,
+                "status": 200
+            }
+        ],
+        "config": {
+            "target_service": "data-service",
+            "probe_url": "http://localhost:8002/health",
+            "delay_ms": 2000,
+            "num_requests": 5
         },
-        {
-            "request": 2,
-            "latency": 6.037185907363892,
-            "status": 200
+        "test_type": "latency"
+    },
+    {
+        "baseline": [
+            {
+                "request": 1,
+                "latency": 0.007,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.009,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.002,
+                "status": 200
+            }
+        ],
+        "during_fault": [
+            {
+                "request": 1,
+                "latency": 2.011,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 2.008,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 2.006,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 2.007,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 2.01,
+                "status": 200
+            }
+        ],
+        "post_recovery": [
+            {
+                "request": 1,
+                "latency": 0.006,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.004,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.005,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.004,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.004,
+                "status": 200
+            }
+        ],
+        "config": {
+            "target_service": "data-service",
+            "probe_url": "http://localhost:8002/health",
+            "delay_ms": 2000,
+            "num_requests": 5
         },
-        {
-            "request": 3,
-            "latency": 6.030162334442139,
-            "status": 200
+        "test_type": "latency",
+        "source": "experiment",
+        "timestamp": "2026-04-04T03:57:51.577458+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "crash",
+        "service": "data-service",
+        "parameters": {},
+        "result": {
+            "action": "Stopped container target-app-data-service-1"
         },
-        {
-            "request": 4,
-            "latency": 6.0271265506744385,
-            "status": 200
+        "timestamp": "2026-04-04T05:37:21.573250+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "crash",
+        "service": "data-service",
+        "result": {
+            "action": "Started container target-app-data-service-1"
         },
-        {
-            "request": 5,
-            "latency": 6.050925254821777,
-            "status": 200
-        }
-    ],
-    "stress_test": [
-        {
-            "request": 1,
-            "latency": 0.0203857421875,
-            "status": 200
+        "timestamp": "2026-04-04T05:37:32.783615+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "8",
+            "timeout": "150"
         },
-        {
-            "request": 2,
-            "latency": 0.01865220069885254,
-            "status": 200
+        "result": {
+            "action": "Injected CPU stress (8 workers, 150s) on target-app-data-service-1"
         },
-        {
-            "request": 3,
-            "latency": 0.01706409454345703,
-            "status": 200
-        }
-    ]
-}
+        "timestamp": "2026-04-04T05:39:07.464346+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-04T05:40:28.976839+00:00"
+    },
+    {
+        "baseline": [
+            {
+                "request": 1,
+                "latency": 0.006,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.002,
+                "status": 200
+            }
+        ],
+        "during_fault": [
+            {
+                "request": 1,
+                "latency": 2.009,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 2.009,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 2.007,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 2.01,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 2.011,
+                "status": 200
+            }
+        ],
+        "post_recovery": [
+            {
+                "request": 1,
+                "latency": 0.004,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.002,
+                "status": 200
+            }
+        ],
+        "config": {
+            "target_service": "data-service",
+            "probe_url": "http://localhost:8002/health",
+            "delay_ms": 2000,
+            "num_requests": 5
+        },
+        "test_type": "latency",
+        "source": "experiment",
+        "timestamp": "2026-04-04T06:04:41.946324+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "crash",
+        "service": "data-service",
+        "parameters": {},
+        "result": {
+            "action": "Stopped container target-app-data-service-1"
+        },
+        "timestamp": "2026-04-04T06:17:23.747465+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "crash",
+        "service": "data-service",
+        "result": {
+            "action": "Started container target-app-data-service-1"
+        },
+        "timestamp": "2026-04-04T06:17:37.294226+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "data-service",
+        "parameters": {
+            "delay_ms": "1200",
+            "jitter_ms": "0"
+        },
+        "result": {
+            "action": "Added 1200ms delay (jitter: 0ms) to target-app-data-service-1"
+        },
+        "timestamp": "2026-04-04T06:18:15.890609+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "data-service",
+        "result": {
+            "action": "Removed network rules from target-app-data-service-1"
+        },
+        "timestamp": "2026-04-04T06:19:09.423787+00:00"
+    },
+    {
+        "baseline": [
+            {
+                "request": 1,
+                "latency": 0.006,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.005,
+                "status": 200
+            }
+        ],
+        "during_fault": [
+            {
+                "request": 1,
+                "latency": 2.011,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 2.008,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 2.008,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 2.01,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 2.013,
+                "status": 200
+            }
+        ],
+        "post_recovery": [
+            {
+                "request": 1,
+                "latency": 0.007,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.003,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.01,
+                "status": 200
+            },
+            {
+                "request": 4,
+                "latency": 0.002,
+                "status": 200
+            },
+            {
+                "request": 5,
+                "latency": 0.002,
+                "status": 200
+            }
+        ],
+        "config": {
+            "target_service": "data-service",
+            "probe_url": "http://localhost:8002/health",
+            "delay_ms": 2000,
+            "num_requests": 5
+        },
+        "test_type": "latency",
+        "source": "experiment",
+        "timestamp": "2026-04-04T06:19:31.447394+00:00"
+    }
+]
