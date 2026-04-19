@@ -7,6 +7,7 @@ so the controller never makes assumptions about the target application.
 
 import json
 import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -17,6 +18,30 @@ from services.experiment_runner import run_latency_test, run_stress_test
 router = APIRouter(prefix="/experiment", tags=["Experiments"])
 
 RESULTS_FILE = "experiment_results.json"
+
+
+def _load_history() -> list:
+    """Load the experiment history from disk."""
+    if os.path.exists(RESULTS_FILE):
+        try:
+            with open(RESULTS_FILE, "r") as f:
+                data = json.load(f)
+                # Handle legacy format (single dict) by wrapping in list
+                if isinstance(data, dict):
+                    return [data]
+                return data
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
+
+
+def _save_entry(entry: dict):
+    """Append a timestamped entry to experiment history."""
+    history = _load_history()
+    entry["timestamp"] = datetime.now(timezone.utc).isoformat()
+    history.append(entry)
+    with open(RESULTS_FILE, "w") as f:
+        json.dump(history, f, indent=4)
 
 
 class ExperimentRequest(BaseModel):
@@ -65,21 +90,21 @@ async def run_experiment(req: ExperimentRequest):
 
     # Add test type to the result
     results["test_type"] = req.fault_type
+    results["source"] = "experiment"
 
     # Persist results for later retrieval / AI analysis
-    with open(RESULTS_FILE, "w") as f:
-        json.dump(results, f, indent=4)
+    _save_entry(results)
 
     return results
 
 
 @router.get("/results")
 def get_results():
-    """Return the most recently saved experiment results."""
-    if not os.path.exists(RESULTS_FILE):
+    """Return all saved experiment results."""
+    history = _load_history()
+    if not history:
         raise HTTPException(
             status_code=404,
             detail="No experiment results found. Run an experiment first.",
         )
-    with open(RESULTS_FILE, "r") as f:
-        return json.load(f)
+    return history

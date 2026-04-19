@@ -7,6 +7,9 @@ services:
       - "8000:8000"
     networks:
       - test-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
 
   auth-service:
     build: ./auth-service
@@ -17,6 +20,7 @@ services:
     cap_add:
       - NET_ADMIN
     privileged: true
+
   data-service:
     build: ./data-service
     ports:
@@ -26,6 +30,7 @@ services:
     cap_add:
       - NET_ADMIN
     privileged: true
+
   prometheus:
     image: prom/prometheus
     volumes:
@@ -34,6 +39,7 @@ services:
       - "9090:9090"
     networks:
       - test-net
+
   grafana:
     image: grafana/grafana
     ports:
@@ -42,7 +48,11 @@ services:
       - test-net
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin    
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
 
 networks:
   test-net:
