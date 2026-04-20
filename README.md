@@ -15,9 +15,9 @@ Unlike traditional tools that simply break your system and force you to dig thro
 
 ## 📖 Table of Contents
 1. [Prerequisites & Initial Setup](#1-prerequisites--initial-setup)
-2. [Setting up the Target Application](#2-setting-up-the-target-application)
-3. [Execution Set A: Pure CLI & Local Developer Setup (Granular Testing)](#3-execution-set-a-pure-cli--local-developer-setup-granular-testing)
-4. [Execution Set B: The Pluggable Docker Image (Recommended for CI/CD)](#4-execution-set-b-the-pluggable-docker-image-recommended-for-cicd)
+2. [Setting up the Target Application & Observability](#2-setting-up-the-target-application--observability)
+3. [Execution Set A: Pure CLI & Local Scripting (No Overall Docker Image)](#3-execution-set-a-pure-cli--local-scripting-no-overall-docker-image)
+4. [Execution Set B: The Pluggable Docker Image (Frontend Included)](#4-execution-set-b-the-pluggable-docker-image-frontend-included)
 5. [Jenkins Pipeline Integration Guide (External Plug-and-Play)](#5-jenkins-pipeline-integration-guide-external-plug-and-play)
 6. [Supported Fault Types](#6-supported-fault-types)
 7. [Troubleshooting](#7-troubleshooting)
@@ -26,45 +26,59 @@ Unlike traditional tools that simply break your system and force you to dig thro
 
 ## 1. Prerequisites & Initial Setup
 
-Assume you are starting with nothing but a text editor (like VSCode). To run this project from scratch, you must install the following software on your machine:
+Assume you are starting with nothing but your computer and an IDE (like VSCode). To run this project from scratch, you must install the following software:
 
 1. **Docker & Docker Compose**: The entire system runs isolated processes inside containers.
-2. **Python 3.10+**: Required for the FastAPI backend engine.
+2. **Python 3.10+**: Required for the FastAPI backend engine and manual scripts.
 3. **Node.js (v18+) & npm**: Required to run and build the React frontend dashboard.
 
 #### Securing your Gemini AI Key
-The AI features require an API key to communicate with Google's GenAI models.
+The AI features require an API key to communicate with Google's GenAI models. You should use a `.env` file to manage this key locally.
 1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Click **Create API Key** and copy the string.
-3. Open this project in your IDE. In the root folder of this project (next to this README), create a new file named exactly `.env`.
+3. Open this project in your IDE. In the root folder of this project (next to this README file), create a new file named exactly `.env`.
 4. Add the following line to the file, replacing the placeholder with your copied key:
    ```env
-   GEMINI_API_KEY=AIzaSyYourGeneratedKeyGoesHere12345
+   GEMINI_API_KEY=YOUR_KEY
    ```
 *(Note: Because of our built-in fallback engine, if your primary Gemini model gets rate-limited by high global traffic, we will automatically fall back to alternative Gemini models!)*
 
 ---
 
-## 2. Setting up the Target Application
+## 2. Setting up the Target Application & Observability
 
 Chaos engineers need an application to attack. Included inside the `target-app` folder is a dummy e-commerce microservice architecture composed of:
 - `api-gateway`: Receives the initial web traffic.
 - `auth-service` & `data-service`: Internal logic services.
-- `prometheus` & `grafana`: Industry-standard metric collectors tracking container memory/CPU.
+- `prometheus`: A time-series database tracking container memory/CPU.
+- `grafana`: Industry-standard metrics dashboard.
 
 Start this stack natively using Docker Compose:
 ```bash
 cd target-app
 docker compose down -v   # Ensure a clean slate
-docker compose up -d
+docker compose up -d     # Starts all 5 microservices
+cd ..
 ```
 *Wait 15 seconds for Prometheus and Grafana to boot fully.*
 
+### 📊 How to see Metrics in Grafana & Prometheus
+You can visually see the spikes when a fault is occurring!
+
+1. Open **Prometheus** at `http://localhost:9090` in your browser.
+   - Go to **Status > Targets** to verify all target microservices (`api-gateway`, etc) are registered and "UP".
+   - Go to **Graph**, type `up` and hit execute to see the raw metrics.
+2. Open **Grafana** at `http://localhost:3000` in your browser (Login is `admin` / `admin`).
+   - Go to **Connections > Data Sources > Add data source**.
+   - Select **Prometheus**.
+   - Set the Prometheus server URL to `http://prometheus:9090` (since it runs in the same Docker network).
+   - Click "Save & Test". You can now build powerful CPU/Memory dashboards to visualize Chaos spikes!
+
 ---
 
-## 3. Execution Set A: Pure CLI & Local Developer Setup (Granular Testing)
+## 3. Execution Set A: Pure CLI & Local Scripting (No Overall Docker Image)
 
-This highly-granular method avoids the unified Docker container. It requires you to start the Backend and Frontend manually. **This is highly recommended for users who want to test specific APIs, manually run CLI `curl` commands, or contribute code changes.**
+This highly-granular method lets you test every minute corner of the API independently natively on your OS without the Frontend UI wrapper.
 
 ### Step 3.1: Start the Backend (FastAPI Framework)
 Open a new terminal at the root of the project:
@@ -76,69 +90,68 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 5050
 ```
 
-### Step 3.2: Start the Frontend (Vite React)
-Open a totally different terminal window:
-```bash
-cd frontend
-npm install    # Installs heavy libraries like React elements
-npm run dev
-```
+*(Note: `python-dotenv` natively detects your `.env` file in the root folder, so the AI will work without manual exports!).*
 
-### Step 3.3: Manual CLI Testing (Understanding the Under-the-hood Mechanics)
+### Step 3.2: Manually testing ALL APIs via cURL
+Open a separate terminal window and test exactly how the architecture functions underneath:
 
-Want to know how to interact with the project outside of the Graphical User Interface? Let's use `curl`!
-
-**1. Test the Dummy App's API Gateway manually:**
-```bash
-curl http://localhost:8000/dashboard
-```
-*Result:* You should see a combined JSON payload from both the Auth and Data internal services!
-
-**2. Test the Chaos Controller's Service Discovery via CLI:**
+**1. Service Discovery:** See all target containers dynamically.
 ```bash
 curl http://localhost:5050/status
 ```
-*Result:* The Python backend dynamically lists all running Docker targets on your system.
 
-**3. Test Prometheus Metrics via CLI (No UI):**
+**2. List Fault Types:** Ask the system what chaos abilities it has.
+```bash
+curl http://localhost:5050/faults
+```
+
+**3. Inject Latency:** Hit the target app directly with a raw fault!
+```bash
+curl -X POST "http://localhost:5050/inject/latency/target-app-auth-service-1?delay_ms=3000"
+```
+
+**4. Check Prometheus CLI Reaction:** See if it registered the latency drop.
 ```bash
 curl -g 'http://localhost:9090/api/v1/query?query=up'
 ```
-*Result:* A raw JSON array outputting the exact uptime telemetry Prometheus scrapes every few seconds! Alternatively, open `http://localhost:3000` to visually see Grafana.
 
-**4. Trigger a Latency Test via CLI (Bypassing the UI Backend completely):**
+**5. Heal the Network (Recover):** Fix the broken container!
+```bash
+curl -X POST "http://localhost:5050/recover/latency/target-app-auth-service-1"
+```
+
+**6. Run an End-to-End 3-Phase Experiment via API:**
 ```bash
 curl -X POST http://localhost:5050/experiment/run \
   -H "Content-Type: application/json" \
-  -d '{"target_service":"auth-service", "probe_url":"http://localhost:8000/dashboard", "fault_type":"latency", "delay_ms": 3000, "num_requests": 3}'
+  -d '{"target_service":"target-app-auth-service-1", "probe_url":"http://localhost:8000/dashboard", "fault_type":"latency", "delay_ms": 3000, "num_requests": 3}'
 ```
-*Result:* Your CLI will hang for a few seconds as it dynamically injects 3 seconds of TCP delay using Linux Network Traffic Control (`tc`), tests it 3 times, auto-removes the delay, and spits out a granular mathematical payload comparing the states.
 
-**5. Trigger the AI Report Feature via CLI:**
-Take the JSON output from the command above, and pipe it right back into the `/analyze` endpoint:
+**7. Trigger the AI Report Feature via CLI:**
+Take the JSON output from the experiment above, and pipe it right back into the `/analyze` endpoint:
 ```bash
 curl -X POST http://localhost:5050/experiment/analyze \
   -H "Content-Type: application/json" \
   -d '{ "baseline": [{"latency": 0.05}], "during_fault": [{"latency": 3.01}], "config": {"fault_type":"latency"} }'
 ```
-*Result:* You will see a raw Markdown string generated dynamically by Google Gemini containing remediation strategies based mathematically on your fake payload!
 
-### Step 3.4: Bring it Together in the UI
-Now that you know how the API works natively, open your browser to **http://localhost:5173**.
-1. Select a target object (e.g., `api-gateway`).
-2. Run an experiment and wait for the table graph to appear.
-3. Scroll down and click the **Generate AI Report** button to watch the backend securely interact with Gemini. 
+### Step 3.3: Manual Testing using Python Scripts
+We have also included standalone Python scripts that automate API testing without the massive React UI.
+In your Python terminal in the `framework-controller` folder:
+- **Run `python run_experiment.py`**: This script automatically pings the gateway, injects a fault, records latency, recovers the system, and saves it to `experiment_results.json`.
+- **Run `python scenario_generator.py`**: A powerful randomized scenario builder.
+- **Run `python ai_analyst.py`**: A dedicated script that parses the results JSON and contacts Gemini natively.
 
-*(When you are done testing, you must KILL the terminal servers by pressing **Ctrl+C** to free up the ports!)*
+*(Optional)* If you wish to use the Visual Dashboard over this native backend, open a separate terminal, `cd frontend`, run `npm install`, and `npm run dev`. Navigate to `http://localhost:5173`. Wait for the framework controller to load up completely in your backend prior to running `npm run dev`.
 
 ---
 
-## 4. Execution Set B: The Pluggable Docker Image (Recommended for CI/CD)
+## 4. Execution Set B: The Pluggable Docker Image (Frontend Included)
 
-This is the fully streamlined "production" method. We wrap the Vite UI and the Python server securely inside a single, heavily optimized Docker Image. It serves the React application seamlessly over static files.
+This is the fully streamlined "production" method. We wrap the Vite UI and the Python FastAPI server securely inside a single Docker Image. It serves the React dashboard seamlessly.
 
-### Step 4.1: Guarantee Clean Ports
-If you previously used Execution Set A, you **must close the terminals** so they release port 5050, or this will fail.
+### Step 4.1: Clean up Manual Ports
+If you previously used Execution Set A, you **must close the terminals** so they release port 5050. Press Ctrl+C in your FastAPI terminal!
 
 ### Step 4.2: Build the Super-Image
 Go to the root folder (where this README is):
@@ -147,7 +160,7 @@ docker build -t chaos-controller:latest .
 ```
 
 ### Step 4.3: Run the Engine
-Run the container, making sure to mount your environment variables (`--env-file`) and the Docker socket (`/var/run/docker.sock`) so the framework has permission to inject Linux traffic faults into other running containers on the system!
+Run the container, making sure to mount your environment variables (`--env-file`) and the Docker socket (`/var/run/docker.sock`) so the framework has permission to tamper with local networking inside other containers!
 
 ```bash
 docker run -d \
@@ -158,68 +171,75 @@ docker run -d \
   --env-file .env \
   chaos-controller:latest
 ```
-*(Notice we pass `--network target-app_test-net`. This instructs the framework to bridge physically into the private subnet of the target e-commerce app so it can connect to them easily).*
+*(Notice we pass `--network target-app_test-net`. This bridges physically into the private subnet of the e-commerce app so the dashboard has internal access).*
 
-### Step 4.4: Testing the Engine
-1. Clear your browser cache (`Ctrl+Shift+R`).
-2. Navigate to **http://localhost:5050**.
-3. Select `auth-service`. The system's environment detector will realize it's running inside Docker and will automatically format the Probe URL to use Docker internal DNS names (`http://target-app-api-gateway-1:8000/health`)!
-4. Launch an experiment, examine the results, and generate the AI report instantly!
+### Step 4.4: Testing the Engine Visually
+1. Open your browser to **http://localhost:5050**.
+2. Select `auth-service` from the target list. 
+3. *Important Note on URLs*: The system intelligently detects it is running inside Docker and will automatically format the Probe URL to use internal DNS names (`http://target-app-api-gateway-1:8000/health`) instead of `localhost`.
+4. Launch the `LATENCY TEST`, examine the graphical tables, and click **Generate AI Report**!
 
 ---
 
 ## 5. Jenkins Pipeline Integration Guide (External Plug-and-Play)
 
-The true value of ChaosController is preventing brittle code from entering production environments.
+The true value of ChaosController is preventing brittle code from entering production environments. If you are an external user who has a basic microservice application tested locally and want to integrate this Chaos Framework into Jenkins, read on!
 
-If you have a customized microservice application pushed to GitHub and want to test its resilience in a CI/CD pipeline, follow these exact steps.
-
-### Requirement 1: Allow Target Tampering
-For ChaosController to inject faults from the outside, your target containers must grant localized network permissions. Add these exact parameters to **every service** in your application's `docker-compose.yml`:
+### Requirement 1: Network Tampering Abilities
+For ChaosController to inject faults seamlessly, your target containers must dynamically grant localized network modification privileges. 
+Add these exact parameters to **every service** in your target application's `docker-compose.yml`:
 ```yaml
 services:
   your-service:
     build: .
     cap_add:
-      - NET_ADMIN     # Gives us permission to edit local TCP tables
-    privileged: true  # Provides hooks for CPU stress tests
+      - NET_ADMIN     # Gives us permission to edit local TCP tables (tc iptables)
+    privileged: true  # Provides hooks for CPU stress scripts
 ```
 
-Additionally, ensure your target Dockerfile contains standard injection utilities:
+Ensure your target Dockerfile contains standard chaos utilities:
 ```dockerfile
-# Add this above your ENTRYPOINT
+# Add this right above your ENTRYPOINT/CMD
 RUN apt-get update && apt-get install -y iproute2 stress-ng && rm -rf /var/lib/apt/lists/*
 ```
 
-### Requirement 2: The Jenkinsfile Stage
-Inject the following stage directly into your existing `Jenkinsfile` right before your "Deploy to Production" step:
+### Requirement 2: Jenkins Configuration
+1. Open your Jenkins Server.
+2. Ensure you have the `Docker Pipeline plugin` installed.
+3. Manage Jenkins -> Credentials -> Create a "Secret text" credential named `gemini-api-key` using your exact Google AI Studio key!
+
+### Requirement 3: The Jenkinsfile Stage
+Inject this exact stage directly into your target app's `Jenkinsfile`, ideally running right after your app builds but right before your final "Deploy to AWS/Production" pipeline step:
 
 ```groovy
 stage('Resilience Experiment Gate') {
     steps {
         script {
-            // 1. Build the unified Chaos Controller dynamically
-            sh 'docker build -t chaos-controller:latest .'
+            // 1. Pull exactly our framework dynamically
+            sh 'git clone https://github.com/anoint2612/Failure_injection_Major_Project.git temp-chaos-engine'
+            sh 'cd temp-chaos-engine && docker build -t chaos-controller:latest .'
             
-            // 2. Start the controller (Make sure to replace MY_NETWORK with your app network!)
-            sh '''
-            docker rm -f chaos-controller-ci || true
-            docker run -d --name chaos-controller-ci \
-                --network MY_NETWORK_default \
-                -p 5050:5050 \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                -e GEMINI_API_KEY=${GEMINI_API_KEY} \
-                chaos-controller:latest
-            '''
+            // 2. Start the controller (Replace MY_NETWORK with your app network!)
+            withCredentials([string(credentialsId: 'gemini-api-key', variable: 'GEMINI_KEY')]) {
+                sh '''
+                docker rm -f chaos-controller-ci || true
+                docker run -d --name chaos-controller-ci \
+                    --network MY_NETWORK_default \
+                    -p 5050:5050 \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -e GEMINI_API_KEY=${GEMINI_KEY} \
+                    chaos-controller:latest
+                '''
+            }
             
-            // 3. Pause the CI pipeline until an SRE reviews the telemetry
+            // 3. Pause the CI pipeline until an SRE tests the system 
             def dashboardUrl = "http://localhost:5050"
             echo "🚨 CHAOS CONTROLLER IS LIVE! 🚨"
-            echo "Access the dashboard at: ${dashboardUrl}"
             
+            // This Jenkins Pipeline pauses entirely until a physical human decides!
             def userInput = input(
                 id: 'chaosApproval', 
-                message: "Did your microservices survive the Chaos Injection?", 
+                message: "Please evaluate your App at ${dashboardUrl}. Did your microservices survive the Chaos Injection?", 
                 parameters: [
                     choice(choices: ['Yes - Resilient', 'No - Weak Code'], description: 'Review the AI Architect Remediation Report before deciding.', name: 'STATUS')
                 ]
@@ -232,7 +252,9 @@ stage('Resilience Experiment Gate') {
     }
 }
 ```
-**How this works in reality:** The developer pushes code. Jenkins spins up their app, compiles the container, and **freezes**. The developer logs into port 5050, tests clicking around, reads the AI guidance, and clicks "Approve" back in Jenkins if the app proved to be robust enough for actual production deployment!
+**How this works in reality:** You `git commit` to your repository. Jenkins automatically builds your internal app containers. It then pulls and spins up the Chaos Controller! The Jenkins Pipeline immediately **freezes**. 
+
+You open `http://localhost:5050` (or your Jenkins server IP), break your own application deliberately, and then dynamically read the Gemini AI guidance. If you feel it recovered well, you open Jenkins and securely click "Approve" so the deployment goes to actual production!
 
 ---
 
