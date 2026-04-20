@@ -60,7 +60,9 @@ async def get_status(project: str = None):
             **health,
         })
 
-    return {"services": statuses, "timestamp": time.time()}
+    import os
+    is_docker = os.path.exists("/.dockerenv")
+    return {"services": statuses, "timestamp": time.time(), "is_docker": is_docker}
 
 
 @router.get("/faults")

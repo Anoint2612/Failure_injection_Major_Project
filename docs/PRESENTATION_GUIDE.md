@@ -68,10 +68,11 @@ This is where you prove the project's true value for CI/CD pipelines.
 **While it runs, explain the 3-Phase Methodology:**
 * *"It's doing 5 requests to establish a baseline, then it injects the fault, does 5 more requests under duress, and finally auto-recovers the container and verifies it's healthy."*
 
-**When the AI Report generates:**
-* Show the structured JSON data on the left.
-* Emphasize the **Gemini AI Root Cause Analysis** on the right. 
-* *"Instead of just failing a pipeline silently, the framework feeds the telemetry to Google's Gemini GenAI, which acts as an automated Site Reliability Engineer (SRE), telling the developer exactly why the failure happened and how to fix their code (e.g., adding circuit breakers or timeouts) before they are allowed to merge."*
+**Once the experiment finishes and the Results table appears:**
+1. Scroll down to the new **Gemini AI Remediation** panel.
+2. Click the **Generate AI Report** button.
+3. Show the audience how the framework automatically feeds the telemetry to Google's Gemini GenAI, which acts as an automated Site Reliability Engineer (SRE).
+4. Explain how this prevents teams from spending hours investigating CI/CD failures — the AI tells them exactly why the failure happened and how to fix their code (e.g., adding circuit breakers or timeouts).
 
 ### Step E: The Jenkins Integration
 Finally, show them the documentation (`docs/JENKINS_INTEGRATION.md`) and the `Jenkinsfile` you wrote.

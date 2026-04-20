@@ -1,6 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import './index.css';
 
+// Simple markdown renderer - converts basic markdown to HTML
+function renderMarkdown(md) {
+  if (!md) return '';
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br/>');
+}
+
 // Dev mode (Vite on :5173) → call API on :5050
 // Production (served from Docker on :5050) → relative path (same origin)
 const API = window.location.port === '5173'
@@ -14,6 +31,8 @@ function App() {
   const [target, setTarget] = useState(null);
   const [runningType, setRunningType] = useState(null);
   const [results, setResults] = useState(null);
+  const [aiReport, setAiReport] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [probeUrl, setProbeUrl] = useState('');
   const [params, setParams] = useState({});
   const [logs, setLogs] = useState([{ id: 0, ts: now(), type: 'info', msg: 'System initialized. Awaiting service discovery.' }]);
@@ -42,7 +61,17 @@ function App() {
         setServices(d.services || []);
         if (!target && d.services?.length > 0) {
           const s = d.services.find(s => !['prometheus', 'grafana'].includes(s.service));
-          if (s) { setTarget(s.service); const p = Object.values(s.ports || {})[0]; if (p) setProbeUrl(`http://localhost:${p}/health`); }
+          if (s) { 
+            setTarget(s.service); 
+            if(s.ports && Object.keys(s.ports).length > 0) {
+              const internalPort = Object.keys(s.ports)[0].split('/')[0];
+              const mappedPort = Object.values(s.ports)[0];
+              const isDocker = d.is_docker; // TRUE if backend is in container!
+              const host = isDocker ? s.container_name : 'localhost';
+              const port = isDocker ? internalPort : mappedPort;
+              setProbeUrl(`http://${host}:${port}/health`); 
+            }
+          }
         }
       } catch (_) {}
     };
@@ -87,7 +116,7 @@ function App() {
 
   const experiment = async (type) => {
     if (!probeUrl) { toast('error', 'Probe URL required'); return; }
-    setRunningType(type); setResults(null);
+    setRunningType(type); setResults(null); setAiReport(null);
     log('info', `EXPERIMENT ${type.toUpperCase()} → ${target} | probe: ${probeUrl}`);
     try {
       const r = await api('experiment/run', 'POST', {
@@ -97,6 +126,23 @@ function App() {
       setResults(r); toast('success', 'Experiment complete'); log('success', `Experiment ${type} completed on ${target}`);
     } catch (e) { toast('error', e.message); log('error', e.message); }
     finally { setRunningType(null); }
+  };
+
+  const analyzeAI = async () => {
+    if (!results) return;
+    setAiLoading(true);
+    log('info', `GEN_AI REQUEST → Analyzing ${target} telemetry`);
+    try {
+      const r = await api('experiment/analyze', 'POST', results);
+      setAiReport(r.report);
+      toast('success', 'Gemini AI Report generated');
+      log('success', 'Gemini AI Report successfully generated');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `AI Analysis failed: ${e.message}`);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const setParam = (fault, key, val) => setParams(p => ({ ...p, [fault]: { ...p[fault], [key]: val } }));
@@ -178,7 +224,21 @@ function App() {
             {appSvcs.map(s => (
               <button key={s.container_name}
                 className={`target-btn ${target === s.service ? 'selected' : ''}`}
-                onClick={() => { setTarget(s.service); const p = Object.values(s.ports||{})[0]; if(p) setProbeUrl(`http://localhost:${p}/health`); }}>
+                onClick={() => { 
+                  setTarget(s.service); 
+                  if(s.ports && Object.keys(s.ports).length > 0) {
+                    const internalPort = Object.keys(s.ports)[0].split('/')[0];
+                    const mappedPort = Object.values(s.ports)[0];
+                    // Ask the backend if it's Dockerized (use fetch GET, not api() which defaults to POST)
+                    fetch(`${API}/status`).then(r => r.json()).then(d => {
+                      const host = d.is_docker ? s.container_name : 'localhost';
+                      const port = d.is_docker ? internalPort : mappedPort;
+                      setProbeUrl(`http://${host}:${port}/health`); 
+                    }).catch(() => {
+                      setProbeUrl(`http://localhost:${mappedPort}/health`);
+                    });
+                  }
+                }}>
                 <span className={`target-dot ${s.status === 'up' ? 'up' : 'down'}`} />
                 <span className="target-name">{s.service}</span>
                 <span className="target-port">{Object.values(s.ports||{}).filter(Boolean)[0] || '—'}</span>
@@ -277,6 +337,19 @@ function App() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* AI Analysis - inside results panel */}
+              <div className="ai-section">
+                <div className="panel-header">
+                  <h2>🤖 Gemini AI Remediation</h2>
+                  <button className="btn-ai" onClick={analyzeAI} disabled={aiLoading}>
+                    {aiLoading ? '⏳ Analyzing Telemetry...' : aiReport ? '🔄 Regenerate Analysis' : '✨ Generate AI Report'}
+                  </button>
+                </div>
+                {aiReport && (
+                  <div className="ai-report-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(aiReport) }} />
+                )}
               </div>
             </section>
           )}

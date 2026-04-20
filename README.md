@@ -1,208 +1,264 @@
-# ChaosController — Failure Injection Platform
+# ChaosController — Failure Injection Framework 🌩️💥
 
-An enterprise-grade chaos engineering platform for testing the resilience of containerized microservices. Inject controlled faults — network latency, packet loss, CPU stress, container crashes, and more — then measure impact using a structured 3-phase experiment methodology.
+Welcome to **ChaosController**, a complete, enterprise-grade Chaos Engineering resilience testing platform designed exclusively for modern microservices architectures. 
 
----
+With ChaosController, you can deliberately inject highly-controlled faults—such as network latency, package drops, CPU starvation, and container crashes—into your running Docker applications to observe how they behave under extreme stress. 
 
-## Architecture
+## 🧠 What is Chaos Engineering?
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                         HOST MACHINE                             │
-│                                                                  │
-│  ┌──────────────┐     ┌───────────────────────────────────────┐  │
-│  │  Frontend     │     │   Docker Compose (Target App)         │  │
-│  │  React + Vite │     │  ┌────────────┐   ┌──────────────┐   │  │
-│  │  :5173        │────▶│  │api-gateway │──▶│ auth-service  │   │  │
-│  └──────┬────────┘     │  │   :8000    │   │   :8001       │   │  │
-│         │              │  └─────┬──────┘   └──────────────┘   │  │
-│         │              │        │           ┌──────────────┐   │  │
-│  ┌──────▼────────┐     │        └──────────▶│ data-service │   │  │
-│  │  Controller    │     │                    │   :8002       │   │  │
-│  │  FastAPI       │─────│  ┌────────────┐   └──────────────┘   │  │
-│  │  :5050         │     │  │ prometheus │   ┌──────────────┐   │  │
-│  └───────────────┘     │  │   :9090    │   │   grafana     │   │  │
-│                        │  └────────────┘   │   :3000       │   │  │
-│                        └───────────────────└──────────────┘───┘  │
-└──────────────────────────────────────────────────────────────────┘
-```
+Chaos Engineering is the discipline of experimenting on a software system in order to build confidence in the system's capability to withstand turbulent conditions in production. Instead of waiting for a random outage to happen, ChaosController allows you to purposefully "break" components in a controlled area to see if your fallback mechanisms (like circuit breakers, retries, and load balancers) activate correctly.
 
-**Three layers:**
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Target Application** | FastAPI microservices + Prometheus + Grafana | The system under test — any Docker Compose application |
-| **Chaos Controller** | FastAPI + Docker SDK for Python | Discovers containers, injects faults via `container.exec_run()`, runs experiments |
-| **Dashboard** | React + Vite | Real-time health monitoring, fault catalog, experiment runner with 3-phase results |
+### ✨ The AI-Powered "Secret Sauce"
+Unlike traditional tools that simply break your system and force you to dig through logs, ChaosController securely transmits fault telemetry and latency metrics to **Google's Gemini GenAI**. Gemini acts exactly like a Senior Site Reliability Engineer (SRE). It analyzes the exact network decay caused by the fault and mathematically assigns a Resilience Score along with a structured Markdown report suggesting exact Root Cause fixes (e.g., "Implement a 300ms timeout on the internal API Gateway fetch").
 
 ---
 
-## Fault Catalog (9 Types)
-
-| Category | Fault | Tool | Description |
-|----------|-------|------|-------------|
-| **Infrastructure** | Container Crash | Docker SDK `stop()/start()` | Full container stop/restart |
-| **Network** | Latency | `tc netem delay` | Adds artificial delay to outbound packets |
-| **Network** | Packet Loss | `tc netem loss` | Drops a % of network packets randomly |
-| **Network** | Bandwidth Throttle | `tc tbf` | Limits outbound bandwidth (kbit/s) |
-| **Network** | Network Partition | `iptables DROP` | Blocks traffic to/from a specific service |
-| **Network** | DNS Failure | `/etc/resolv.conf` | Breaks DNS resolution inside a container |
-| **Resource** | CPU Stress | `stress-ng --cpu` | Saturates CPU with worker threads |
-| **Resource** | Memory Stress | `stress-ng --vm` | Allocates and locks memory blocks |
-| **Resource** | Disk I/O Stress | `stress-ng --hdd` | Generates heavy disk write operations |
-
-All faults are **pluggable classes** inheriting from `FaultBase`. Adding a new fault type requires one class — zero router changes.
+## 📖 Table of Contents
+1. [Prerequisites & Initial Setup](#1-prerequisites--initial-setup)
+2. [Setting up the Target Application](#2-setting-up-the-target-application)
+3. [Execution Set A: Pure CLI & Local Developer Setup (Granular Testing)](#3-execution-set-a-pure-cli--local-developer-setup-granular-testing)
+4. [Execution Set B: The Pluggable Docker Image (Recommended for CI/CD)](#4-execution-set-b-the-pluggable-docker-image-recommended-for-cicd)
+5. [Jenkins Pipeline Integration Guide (External Plug-and-Play)](#5-jenkins-pipeline-integration-guide-external-plug-and-play)
+6. [Supported Fault Types](#6-supported-fault-types)
+7. [Troubleshooting](#7-troubleshooting)
 
 ---
 
-## Experiment Methodology
+## 1. Prerequisites & Initial Setup
 
-The experiment runner follows a 3-phase scientific approach:
+Assume you are starting with nothing but a text editor (like VSCode). To run this project from scratch, you must install the following software on your machine:
 
-```
-Phase 1: BASELINE         → Measure normal latency (5 requests)
-Phase 2: INJECT & MEASURE → Apply fault, measure impact (5 requests)
-Phase 3: RECOVER & VERIFY → Remove fault, confirm restoration (5 requests)
-```
+1. **Docker & Docker Compose**: The entire system runs isolated processes inside containers.
+2. **Python 3.10+**: Required for the FastAPI backend engine.
+3. **Node.js (v18+) & npm**: Required to run and build the React frontend dashboard.
 
-This provides clear comparative data to identify missing resilience mechanisms (timeouts, circuit breakers, retry policies).
-
----
-
-## Project Structure
-
-```
-.
-├── target-app/                     # The application under test
-│   ├── api-gateway/                # Gateway service (port 8000)
-│   ├── auth-service/               # Auth service (port 8001)
-│   ├── data-service/               # Data service (port 8002)
-│   ├── monitoring/                 # Prometheus config
-│   └── docker-compose.yml
-│
-├── framework-controller/           # Chaos engine backend
-│   ├── main.py                     # FastAPI entry point
-│   ├── config.py                   # Environment configuration
-│   ├── routers/
-│   │   ├── injection.py            # POST /inject/{fault}/{service}
-│   │   ├── recovery.py             # POST /recover/{fault}/{service}
-│   │   ├── discovery.py            # GET /status
-│   │   ├── experiments.py          # POST /experiment/run
-│   │   └── metrics.py              # GET /metrics/prometheus
-│   ├── services/
-│   │   ├── fault_library.py        # Pluggable fault registry (9 types)
-│   │   ├── docker_manager.py       # Docker SDK container operations
-│   │   ├── experiment_runner.py    # 3-phase experiment engine
-│   │   └── health_checker.py       # Service health probing
-│   └── requirements.txt
-│
-└── frontend/                       # React dashboard
-    ├── src/
-    │   ├── App.jsx                 # Main dashboard component
-    │   └── index.css               # Design system (dark/light themes)
-    └── index.html
-```
+#### Securing your Gemini AI Key
+The AI features require an API key to communicate with Google's GenAI models.
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Click **Create API Key** and copy the string.
+3. Open this project in your IDE. In the root folder of this project (next to this README), create a new file named exactly `.env`.
+4. Add the following line to the file, replacing the placeholder with your copied key:
+   ```env
+   GEMINI_API_KEY=AIzaSyYourGeneratedKeyGoesHere12345
+   ```
+*(Note: Because of our built-in fallback engine, if your primary Gemini model gets rate-limited by high global traffic, we will automatically fall back to alternative Gemini models!)*
 
 ---
 
-## CI/CD Pipeline Integration (Jenkins / Docker)
+## 2. Setting up the Target Application
 
-ChaosController is packaged as a ready-to-use Docker image containing both the backend and frontend. You can easily plug it into Jenkins pipelines to act as an automated resilience testing gate.
+Chaos engineers need an application to attack. Included inside the `target-app` folder is a dummy e-commerce microservice architecture composed of:
+- `api-gateway`: Receives the initial web traffic.
+- `auth-service` & `data-service`: Internal logic services.
+- `prometheus` & `grafana`: Industry-standard metric collectors tracking container memory/CPU.
 
-→ **[Full Jenkins Integration Guide](docs/JENKINS_INTEGRATION.md)**
-
-```bash
-# Add to your Jenkinsfile or run directly
-docker run -d \
-  --name chaos-controller-ci \
-  --network <your_app_network> \
-  -p 5050:5050 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -e GEMINI_API_KEY=${GEMINI_API_KEY} \
-  chaos-controller:latest
-```
-Access the dashboard at `http://localhost:5050`.
-
----
-
-## Local Development Setup
-
-If you wish to modify the controller or the React frontend, run the components separately on your host machine.
-
-### Prerequisites
-
-- **Docker** with Docker Compose
-- **Python 3.8+**
-- **Node.js 18+**
-
-### 1. Start the Target Application
-
+Start this stack natively using Docker Compose:
 ```bash
 cd target-app
-docker compose up --build -d
+docker compose down -v   # Ensure a clean slate
+docker compose up -d
 ```
+*Wait 15 seconds for Prometheus and Grafana to boot fully.*
 
-### 2. Start the Backend API (FastAPI)
+---
 
+## 3. Execution Set A: Pure CLI & Local Developer Setup (Granular Testing)
+
+This highly-granular method avoids the unified Docker container. It requires you to start the Backend and Frontend manually. **This is highly recommended for users who want to test specific APIs, manually run CLI `curl` commands, or contribute code changes.**
+
+### Step 3.1: Start the Backend (FastAPI Framework)
+Open a new terminal at the root of the project:
 ```bash
 cd framework-controller
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv venv           # Create a virtual environment
+source venv/bin/activate       # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 5050
 ```
 
-### 3. Start the Frontend Dashboard (React + Vite)
-
+### Step 3.2: Start the Frontend (Vite React)
+Open a totally different terminal window:
 ```bash
 cd frontend
-npm install
+npm install    # Installs heavy libraries like React elements
 npm run dev
 ```
 
-Open **http://localhost:5173** — the dashboard will interact with your local backend on port 5050.
+### Step 3.3: Manual CLI Testing (Understanding the Under-the-hood Mechanics)
+
+Want to know how to interact with the project outside of the Graphical User Interface? Let's use `curl`!
+
+**1. Test the Dummy App's API Gateway manually:**
+```bash
+curl http://localhost:8000/dashboard
+```
+*Result:* You should see a combined JSON payload from both the Auth and Data internal services!
+
+**2. Test the Chaos Controller's Service Discovery via CLI:**
+```bash
+curl http://localhost:5050/status
+```
+*Result:* The Python backend dynamically lists all running Docker targets on your system.
+
+**3. Test Prometheus Metrics via CLI (No UI):**
+```bash
+curl -g 'http://localhost:9090/api/v1/query?query=up'
+```
+*Result:* A raw JSON array outputting the exact uptime telemetry Prometheus scrapes every few seconds! Alternatively, open `http://localhost:3000` to visually see Grafana.
+
+**4. Trigger a Latency Test via CLI (Bypassing the UI Backend completely):**
+```bash
+curl -X POST http://localhost:5050/experiment/run \
+  -H "Content-Type: application/json" \
+  -d '{"target_service":"auth-service", "probe_url":"http://localhost:8000/dashboard", "fault_type":"latency", "delay_ms": 3000, "num_requests": 3}'
+```
+*Result:* Your CLI will hang for a few seconds as it dynamically injects 3 seconds of TCP delay using Linux Network Traffic Control (`tc`), tests it 3 times, auto-removes the delay, and spits out a granular mathematical payload comparing the states.
+
+**5. Trigger the AI Report Feature via CLI:**
+Take the JSON output from the command above, and pipe it right back into the `/analyze` endpoint:
+```bash
+curl -X POST http://localhost:5050/experiment/analyze \
+  -H "Content-Type: application/json" \
+  -d '{ "baseline": [{"latency": 0.05}], "during_fault": [{"latency": 3.01}], "config": {"fault_type":"latency"} }'
+```
+*Result:* You will see a raw Markdown string generated dynamically by Google Gemini containing remediation strategies based mathematically on your fake payload!
+
+### Step 3.4: Bring it Together in the UI
+Now that you know how the API works natively, open your browser to **http://localhost:5173**.
+1. Select a target object (e.g., `api-gateway`).
+2. Run an experiment and wait for the table graph to appear.
+3. Scroll down and click the **Generate AI Report** button to watch the backend securely interact with Gemini. 
+
+*(When you are done testing, you must KILL the terminal servers by pressing **Ctrl+C** to free up the ports!)*
 
 ---
 
-## API Reference
+## 4. Execution Set B: The Pluggable Docker Image (Recommended for CI/CD)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/status` | Live health check for all discovered services |
-| `GET` | `/faults` | Returns the fault catalog with parameter metadata |
-| `POST` | `/inject/{fault_name}/{service}` | Inject a fault (e.g., `/inject/latency/data-service?delay_ms=2000`) |
-| `POST` | `/recover/{fault_name}/{service}` | Remove a fault and restore normal operation |
-| `POST` | `/experiment/run` | Run a 3-phase experiment (baseline → fault → recovery) |
-| `GET` | `/metrics/prometheus` | Fetch Prometheus metrics for a service |
+This is the fully streamlined "production" method. We wrap the Vite UI and the Python server securely inside a single, heavily optimized Docker Image. It serves the React application seamlessly over static files.
+
+### Step 4.1: Guarantee Clean Ports
+If you previously used Execution Set A, you **must close the terminals** so they release port 5050, or this will fail.
+
+### Step 4.2: Build the Super-Image
+Go to the root folder (where this README is):
+```bash
+docker build -t chaos-controller:latest .
+```
+
+### Step 4.3: Run the Engine
+Run the container, making sure to mount your environment variables (`--env-file`) and the Docker socket (`/var/run/docker.sock`) so the framework has permission to inject Linux traffic faults into other running containers on the system!
+
+```bash
+docker run -d \
+  --name chaos-controller-ci \
+  --network target-app_test-net \
+  -p 5050:5050 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --env-file .env \
+  chaos-controller:latest
+```
+*(Notice we pass `--network target-app_test-net`. This instructs the framework to bridge physically into the private subnet of the target e-commerce app so it can connect to them easily).*
+
+### Step 4.4: Testing the Engine
+1. Clear your browser cache (`Ctrl+Shift+R`).
+2. Navigate to **http://localhost:5050**.
+3. Select `auth-service`. The system's environment detector will realize it's running inside Docker and will automatically format the Probe URL to use Docker internal DNS names (`http://target-app-api-gateway-1:8000/health`)!
+4. Launch an experiment, examine the results, and generate the AI report instantly!
 
 ---
 
-## Key Design Decisions
+## 5. Jenkins Pipeline Integration Guide (External Plug-and-Play)
 
-### Container-Native Execution
-All fault commands (`tc`, `iptables`, `stress-ng`, `kill`) execute **inside Docker containers** via `container.exec_run()`. The host machine is never affected.
+The true value of ChaosController is preventing brittle code from entering production environments.
 
-### Target-Agnostic Discovery
-The controller uses `com.docker.compose.service` labels for dynamic service discovery. It works with **any Docker Compose application** — no configuration needed.
+If you have a customized microservice application pushed to GitHub and want to test its resilience in a CI/CD pipeline, follow these exact steps.
 
-### Docker Desktop Networking
-On Docker Desktop (Mac/Windows), `tc netem` rules affect inter-container traffic on the Docker bridge network but **not** host-to-container port-mapped traffic. Inject faults on a **downstream** service and probe via an **upstream** endpoint to observe latency impact.
+### Requirement 1: Allow Target Tampering
+For ChaosController to inject faults from the outside, your target containers must grant localized network permissions. Add these exact parameters to **every service** in your application's `docker-compose.yml`:
+```yaml
+services:
+  your-service:
+    build: .
+    cap_add:
+      - NET_ADMIN     # Gives us permission to edit local TCP tables
+    privileged: true  # Provides hooks for CPU stress tests
+```
 
-### Container Requirements
-Target containers must include:
-- `iproute2` — for `tc` network manipulation
-- `stress-ng` — for resource stress testing
-- `cap_add: NET_ADMIN` and `privileged: true` in docker-compose.yml
+Additionally, ensure your target Dockerfile contains standard injection utilities:
+```dockerfile
+# Add this above your ENTRYPOINT
+RUN apt-get update && apt-get install -y iproute2 stress-ng && rm -rf /var/lib/apt/lists/*
+```
+
+### Requirement 2: The Jenkinsfile Stage
+Inject the following stage directly into your existing `Jenkinsfile` right before your "Deploy to Production" step:
+
+```groovy
+stage('Resilience Experiment Gate') {
+    steps {
+        script {
+            // 1. Build the unified Chaos Controller dynamically
+            sh 'docker build -t chaos-controller:latest .'
+            
+            // 2. Start the controller (Make sure to replace MY_NETWORK with your app network!)
+            sh '''
+            docker rm -f chaos-controller-ci || true
+            docker run -d --name chaos-controller-ci \
+                --network MY_NETWORK_default \
+                -p 5050:5050 \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -e GEMINI_API_KEY=${GEMINI_API_KEY} \
+                chaos-controller:latest
+            '''
+            
+            // 3. Pause the CI pipeline until an SRE reviews the telemetry
+            def dashboardUrl = "http://localhost:5050"
+            echo "🚨 CHAOS CONTROLLER IS LIVE! 🚨"
+            echo "Access the dashboard at: ${dashboardUrl}"
+            
+            def userInput = input(
+                id: 'chaosApproval', 
+                message: "Did your microservices survive the Chaos Injection?", 
+                parameters: [
+                    choice(choices: ['Yes - Resilient', 'No - Weak Code'], description: 'Review the AI Architect Remediation Report before deciding.', name: 'STATUS')
+                ]
+            )
+            
+            if (userInput == 'No - Weak Code') {
+                error "Pipeline Failed: Application failed resilience testing!"
+            }
+        }
+    }
+}
+```
+**How this works in reality:** The developer pushes code. Jenkins spins up their app, compiles the container, and **freezes**. The developer logs into port 5050, tests clicking around, reads the AI guidance, and clicks "Approve" back in Jenkins if the app proved to be robust enough for actual production deployment!
 
 ---
 
-## Troubleshooting
+## 6. Supported Fault Types
 
-| Problem | Solution |
-|---------|----------|
-| `tc: RTNETLINK answers: Operation not permitted` | Add `cap_add: NET_ADMIN` and `privileged: true` to the service in docker-compose.yml |
-| Services not appearing in dashboard | Verify containers are running: `docker compose ps` |
-| Latency test shows no impact | Probe via an upstream gateway (e.g., `http://localhost:8000/dashboard`), not the target service directly |
-| Health check shows DOWN after latency injection | Expected if delay > health timeout (15s). Click Recover to clear rules |
-| Frontend won't start | Run `cd frontend && npm install && npm run dev` |
-| `stress-ng` not found | Add `RUN apt-get update && apt-get install -y stress-ng` to the target Dockerfile |
+We currently support the following destructive capabilities via standard Linux internal tooling:
+
+| Category | Fault | Linux Subsystem Tool | Effect on Application |
+|----------|-------|----------------------|-----------------------|
+| 🔴 **Infrastructure** | Container Crash | Docker SDK | Hard-stops the container abruptly, then forcibly restarts it in 5s. Tests failovers. |
+| 🟡 **Network** | Latency | `tc netem delay` | Add exactly `X` milliseconds of delayed outbound HTTP traffic. |
+| 🟡 **Network** | Packet Loss | `tc netem loss` | Randomly drop a set percentage of network packets. |
+| 🟡 **Network** | Bandwidth Limit | `tc tbf limit` | Throttle the container's bandwidth to test low-data-connection behaviors. |
+| 🟡 **Network** | Partition | `iptables DROP` | Block all networking entirely, simulating a severed switch. |
+| 🟡 **Network** | DNS Failure | `/etc/resolv.conf` | Destroy the container's ability to locate other microservices by name. |
+| 🔵 **Resource** | CPU Stress | `stress-ng --cpu` | Fully saturate the container's allocated processors. |
+| 🔵 **Resource** | Memory Stress | `stress-ng --vm` | Greedily allocate memory blocks and lock them to trigger OOM faults. |
+
+---
+
+## 7. Troubleshooting
+
+| Symptom | Probable Cause | Quick Fix |
+|---------|----------------|-----------|
+| **AI Feature not working** | Wrong API Key / Overload | Ensure `.env` is loaded. Our AI model automatically falls back to secondary networks if overloaded. |
+| **All Experiments end in "Timeout"** | Wrong Probe URL Context | If hitting `api-gateway` from CLI directly, probe `localhost:8000`. If using the fully Dockerized mode, probe `target-app-api-gateway-1:8000`. |
+| **"Operation not permitted" on Latency block** | `docker-compose.yml` mismatch | You absolutely MUST have `cap_add: [NET_ADMIN]` on the target container. |
+| **The Framework can't find my containers** | Wrong Network Binding | When running Set B, if you don't attach ChaosController to `--network target-app_test-net`, it physically can't route packets to the containers. |
+| **Frontend displays an older version** | Vite Cache issue | Perform a strict Hard Reload (`Ctrl+Shift+R`) inside Chrome/Firefox. |

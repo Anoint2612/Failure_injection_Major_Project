@@ -108,3 +108,20 @@ def get_results():
             detail="No experiment results found. Run an experiment first.",
         )
     return history
+
+
+@router.post("/analyze")
+def analyze_experiment(data: dict):
+    """
+    Pass experiment results to Gemini AI to get a Root Cause Analysis
+    and remediation report.
+    """
+    from ai_analyst import analyze_results
+    try:
+        report = analyze_results(data)
+        return {"report": report}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI Analysis failed. Check if GEMINI_API_KEY is configured. Error: {str(e)}"
+        )

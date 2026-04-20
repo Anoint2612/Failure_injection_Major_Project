@@ -7,11 +7,8 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-def analyze_results(json_file):
-    # Read the data from the experiment we just ran
-    with open(json_file, 'r') as f:
-        data = json.load(f)
-
+def analyze_results(data: dict) -> str:
+    """Analyze experiment telemetry and return an SRE remediation report."""
     # The Prompt: This is the "Secret Sauce" for your research paper
     prompt = f"""
     You are a Senior Site Reliability Engineer (SRE). 
@@ -25,17 +22,30 @@ def analyze_results(json_file):
     3. Remediation: Suggest 2 specific technical improvements (e.g., timeouts, circuit breakers).
     """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    models_to_try = [
+        "gemini-2.5-flash", 
+        "gemini-1.5-pro", 
+        "gemini-1.5-flash"
+    ]
     
-    print("\n--- GEMINI AI RESILIENCE REPORT ---")
-    print(response.text)
-    
-    # Save the report for the research paper
-    with open("ai_remediation_report.md", "w") as f:
-        f.write(response.text)
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            last_exception = e
+            print(f"Model {model_name} failed: {e}. Trying fallback...")
+            continue
+            
+    # If all models fail, return a structured error document
+    return f"""
+# Service Unavailable
+The AI analysis failed after attempting multiple models ({', '.join(models_to_try)}). 
+**Error Details:** `{last_exception}`
 
-if __name__ == "__main__":
-    analyze_results("experiment_results.json")
+Please check your GEMINI_API_KEY rate limits or try again later.
+"""
