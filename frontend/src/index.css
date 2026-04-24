@@ -134,6 +134,32 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .target-name { flex: 1; }
 .target-port { font-family: var(--mono); font-size: 0.75rem; color: var(--text-2); }
 
+/* Scenario Planner (sidebar) */
+.scenario-desc {
+  font-size: 0.78rem; color: var(--text-2); line-height: 1.5;
+  margin-bottom: 10px;
+}
+.btn-scenario {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius); border: none;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: #fff; font-family: var(--font); font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; transition: all var(--transition); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.btn-scenario:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(108,99,255,0.35); }
+.btn-scenario:disabled { opacity: 0.5; cursor: not-allowed; }
+.scenario-report {
+  margin-top: 12px; padding: 12px; border-radius: var(--radius);
+  background: var(--bg-2); border: 1px solid var(--border-0);
+  font-size: 0.78rem; line-height: 1.6; color: var(--text-1);
+  max-height: 320px; overflow-y: auto;
+}
+.scenario-report strong { color: var(--accent); }
+.scenario-report li { margin-bottom: 4px; }
+.scenario-report ul, .scenario-report ol { padding-left: 1.2rem; margin-bottom: 0.5em; }
+.scenario-report h1, .scenario-report h2, .scenario-report h3 { color: var(--accent); font-size: 0.85rem; margin-top: 0.8em; margin-bottom: 0.3em; }
+.scenario-report code { background: var(--bg-3); padding: 1px 4px; border-radius: 3px; color: var(--green); font-family: var(--mono); font-size: 0.75rem; }
+
 .field-label { font-size: 0.72rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: block; }
 .field-input {
   width: 100%; padding: 8px 10px; font-size: 0.82rem;

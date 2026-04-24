@@ -1,240 +1,63 @@
 [
     {
-        "baseline": [
+        "latency_test": [
             {
                 "request": 1,
-                "latency": 0.007,
+                "latency": 6.035388231277466,
                 "status": 200
             },
             {
                 "request": 2,
-                "latency": 0.004,
+                "latency": 9.297837734222412,
                 "status": 200
             },
             {
                 "request": 3,
-                "latency": 0.002,
+                "latency": 6.0313098430633545,
                 "status": 200
             },
             {
                 "request": 4,
-                "latency": 0.002,
+                "latency": 6.0271689891815186,
                 "status": 200
             },
             {
                 "request": 5,
-                "latency": 0.003,
+                "latency": 6.029909610748291,
                 "status": 200
             }
         ],
-        "during_fault": [
+        "stress_test": [
             {
                 "request": 1,
-                "latency": 2.006,
+                "latency": 0.022780656814575195,
                 "status": 200
             },
             {
                 "request": 2,
-                "latency": 2.005,
+                "latency": 0.025119543075561523,
                 "status": 200
             },
             {
                 "request": 3,
-                "latency": 2.006,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 2.007,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 2.007,
+                "latency": 0.02789020538330078,
                 "status": 200
             }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.006,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency"
+        ]
     },
     {
         "baseline": [
             {
                 "request": 1,
-                "latency": 0.007,
-                "status": 200
-            },
-            {
-                "request": 2,
                 "latency": 0.003,
                 "status": 200
             },
             {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
+                "request": 2,
                 "latency": 0.009,
                 "status": 200
             },
             {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 2.011,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 2.008,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 2.006,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 2.007,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 2.01,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.006,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.005,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.004,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-04T03:57:51.577458+00:00"
-    },
-    {
-        "source": "manual_inject",
-        "fault_type": "crash",
-        "service": "data-service",
-        "parameters": {},
-        "result": {
-            "action": "Stopped container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T05:37:21.573250+00:00"
-    },
-    {
-        "source": "manual_recover",
-        "fault_type": "crash",
-        "service": "data-service",
-        "result": {
-            "action": "Started container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T05:37:32.783615+00:00"
-    },
-    {
-        "source": "manual_inject",
-        "fault_type": "cpu_stress",
-        "service": "data-service",
-        "parameters": {
-            "cpu": "8",
-            "timeout": "150"
-        },
-        "result": {
-            "action": "Injected CPU stress (8 workers, 150s) on target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T05:39:07.464346+00:00"
-    },
-    {
-        "source": "manual_recover",
-        "fault_type": "cpu_stress",
-        "service": "data-service",
-        "result": {
-            "action": "Killed stress-ng on target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T05:40:28.976839+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.006,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
                 "request": 3,
                 "latency": 0.002,
                 "status": 200
@@ -253,343 +76,7 @@
         "during_fault": [
             {
                 "request": 1,
-                "latency": 2.009,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 2.009,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 2.007,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 2.01,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 2.011,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-04T06:04:41.946324+00:00"
-    },
-    {
-        "source": "manual_inject",
-        "fault_type": "crash",
-        "service": "data-service",
-        "parameters": {},
-        "result": {
-            "action": "Stopped container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T06:17:23.747465+00:00"
-    },
-    {
-        "source": "manual_recover",
-        "fault_type": "crash",
-        "service": "data-service",
-        "result": {
-            "action": "Started container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T06:17:37.294226+00:00"
-    },
-    {
-        "source": "manual_inject",
-        "fault_type": "latency",
-        "service": "data-service",
-        "parameters": {
-            "delay_ms": "1200",
-            "jitter_ms": "0"
-        },
-        "result": {
-            "action": "Added 1200ms delay (jitter: 0ms) to target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T06:18:15.890609+00:00"
-    },
-    {
-        "source": "manual_recover",
-        "fault_type": "latency",
-        "service": "data-service",
-        "result": {
-            "action": "Removed network rules from target-app-data-service-1"
-        },
-        "timestamp": "2026-04-04T06:19:09.423787+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.006,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.005,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 2.011,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 2.008,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 2.008,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 2.01,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 2.013,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.007,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.01,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-04T06:19:31.447394+00:00"
-    },
-    {
-        "source": "manual_inject",
-        "fault_type": "crash",
-        "service": "data-service",
-        "parameters": {},
-        "result": {
-            "action": "Stopped container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-19T17:03:27.267232+00:00"
-    },
-    {
-        "source": "manual_recover",
-        "fault_type": "crash",
-        "service": "data-service",
-        "result": {
-            "action": "Started container target-app-data-service-1"
-        },
-        "timestamp": "2026-04-19T17:03:32.313159+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.023,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.003,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 2.004,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 2.005,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 3.62,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 2.004,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 2.005,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.021,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.005,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-19T17:03:51.074112+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 2.004,
+                "latency": 2.003,
                 "status": 200
             },
             {
@@ -599,17 +86,17 @@
             },
             {
                 "request": 3,
-                "latency": 2.004,
+                "latency": 2.003,
                 "status": 200
             },
             {
                 "request": 4,
-                "latency": 2.006,
+                "latency": 2.112,
                 "status": 200
             },
             {
                 "request": 5,
-                "latency": 3.391,
+                "latency": 5.29,
                 "status": 200
             }
         ],
@@ -621,71 +108,6 @@
             },
             {
                 "request": 2,
-                "latency": 0.021,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.002,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "delay_ms": 2000,
-            "num_requests": 5
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-19T17:04:50.239499+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.022,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.004,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.003,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 2,
                 "latency": 0.003,
                 "status": 200
             },
@@ -701,66 +123,6 @@
             },
             {
                 "request": 5,
-                "latency": 0.003,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 2,
-                "latency": 0.002,
-                "status": 200
-            },
-            {
-                "request": 3,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 4,
-                "latency": 0.003,
-                "status": 200
-            },
-            {
-                "request": 5,
-                "latency": 0.003,
-                "status": 200
-            }
-        ],
-        "config": {
-            "target_service": "data-service",
-            "probe_url": "http://localhost:8002/health",
-            "cpu": 1,
-            "stress_timeout": 20,
-            "num_requests": 5
-        },
-        "test_type": "stress",
-        "source": "experiment",
-        "timestamp": "2026-04-19T17:08:12.443045+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 0.003,
-                "status": 200
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 3.004,
-                "status": 200
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
                 "latency": 0.003,
                 "status": 200
             }
@@ -768,43 +130,11 @@
         "config": {
             "target_service": "api-gateway",
             "probe_url": "http://localhost:8000/health",
-            "delay_ms": 3000,
-            "num_requests": 1
+            "delay_ms": 2000,
+            "num_requests": 5
         },
         "test_type": "latency",
         "source": "experiment",
-        "timestamp": "2026-04-19T17:47:12.373839+00:00"
-    },
-    {
-        "baseline": [
-            {
-                "request": 1,
-                "latency": 10.0,
-                "status": "timeout"
-            }
-        ],
-        "during_fault": [
-            {
-                "request": 1,
-                "latency": 10.0,
-                "status": "timeout"
-            }
-        ],
-        "post_recovery": [
-            {
-                "request": 1,
-                "latency": 10.0,
-                "status": "timeout"
-            }
-        ],
-        "config": {
-            "target_service": "api-gateway",
-            "probe_url": "http://target-app-api-gateway-1:8000/health",
-            "delay_ms": 3000,
-            "num_requests": 1
-        },
-        "test_type": "latency",
-        "source": "experiment",
-        "timestamp": "2026-04-19T17:48:03.406960+00:00"
+        "timestamp": "2026-04-24T14:43:50.377018+00:00"
     }
 ]

@@ -107,7 +107,7 @@ curl http://localhost:5050/faults
 
 **3. Inject Latency:** Hit the target app directly with a raw fault!
 ```bash
-curl -X POST "http://localhost:5050/inject/latency/target-app-auth-service-1?delay_ms=3000"
+curl -X POST "http://localhost:5050/inject/latency/auth-service?delay_ms=3000"
 ```
 
 **4. Check Prometheus CLI Reaction:** See if it registered the latency drop.
@@ -117,14 +117,14 @@ curl -g 'http://localhost:9090/api/v1/query?query=up'
 
 **5. Heal the Network (Recover):** Fix the broken container!
 ```bash
-curl -X POST "http://localhost:5050/recover/latency/target-app-auth-service-1"
+curl -X POST "http://localhost:5050/recover/latency/auth-service"
 ```
 
 **6. Run an End-to-End 3-Phase Experiment via API:**
 ```bash
 curl -X POST http://localhost:5050/experiment/run \
   -H "Content-Type: application/json" \
-  -d '{"target_service":"target-app-auth-service-1", "probe_url":"http://localhost:8000/dashboard", "fault_type":"latency", "delay_ms": 3000, "num_requests": 3}'
+  -d '{"target_service":"auth-service", "probe_url":"http://localhost:8000/dashboard", "fault_type":"latency", "delay_ms": 3000, "num_requests": 3}'
 ```
 
 **7. Trigger the AI Report Feature via CLI:**

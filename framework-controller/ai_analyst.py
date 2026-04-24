@@ -49,3 +49,22 @@ The AI analysis failed after attempting multiple models ({', '.join(models_to_tr
 
 Please check your GEMINI_API_KEY rate limits or try again later.
 """
+
+if __name__ == "__main__":
+    if not os.path.exists("experiment_results.json"):
+        print("Error: No 'experiment_results.json' found. Please run an experiment first using 'python run_experiment.py'!")
+        exit(1)
+        
+    with open("experiment_results.json", "r") as f:
+        data = json.load(f)
+        
+    print("🤖 AI Analyst is reviewing your telemetry. Please wait...")
+    report = analyze_results(data)
+    
+    # Save the markdown report to disk
+    with open("ai_remediation_report.md", "w") as f:
+        f.write(report)
+        
+    print("\n--- GEMINI AI REMEDIATION REPORT ---")
+    print(report)
+    print("\n✅ Report successfully saved to 'ai_remediation_report.md'")

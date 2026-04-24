@@ -125,3 +125,49 @@ def analyze_experiment(data: dict):
             status_code=500,
             detail=f"AI Analysis failed. Check if GEMINI_API_KEY is configured. Error: {str(e)}"
         )
+
+
+@router.post("/scenario")
+def generate_scenario():
+    """
+    Use Gemini AI to analyze the target application's Docker Compose
+    architecture and suggest a chaos engineering test scenario.
+    """
+    from scenario_generator import generate_chaos_scenario
+    
+    # Try multiple paths for docker-compose.yml (works both locally and in Docker)
+    compose_paths = [
+        "../target-app/docker-compose.yml",
+        "/app/../target-app/docker-compose.yml",
+    ]
+    
+    architecture = None
+    for path in compose_paths:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                architecture = f.read()
+            break
+    
+    if not architecture:
+        # If no compose file found, build architecture from live Docker state
+        from services.docker_manager import list_services
+        services = list_services()
+        arch_lines = ["# Live Docker Architecture (auto-detected)\nservices:"]
+        for svc in services:
+            arch_lines.append(f"  {svc['name']}:")
+            arch_lines.append(f"    container_name: {svc['container_name']}")
+            arch_lines.append(f"    status: {svc['status']}")
+            if svc.get('ports'):
+                arch_lines.append(f"    ports:")
+                for port, host_port in svc['ports'].items():
+                    arch_lines.append(f"      - \"{host_port}:{port}\"")
+        architecture = "\n".join(arch_lines)
+    
+    try:
+        report = generate_chaos_scenario(architecture)
+        return {"scenario": report}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scenario generation failed. Check if GEMINI_API_KEY is configured. Error: {str(e)}"
+        )

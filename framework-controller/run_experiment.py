@@ -4,7 +4,7 @@ import json
 
 # Configurations
 GATEWAY_URL = "http://localhost:8000/dashboard"
-CONTROLLER_URL = "http://localhost:5000"
+CONTROLLER_URL = "http://localhost:5050"
 
 def run_chaos_test():
     results = []

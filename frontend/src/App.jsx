@@ -33,6 +33,8 @@ function App() {
   const [results, setResults] = useState(null);
   const [aiReport, setAiReport] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [scenarioReport, setScenarioReport] = useState(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
   const [probeUrl, setProbeUrl] = useState('');
   const [params, setParams] = useState({});
   const [logs, setLogs] = useState([{ id: 0, ts: now(), type: 'info', msg: 'System initialized. Awaiting service discovery.' }]);
@@ -145,6 +147,22 @@ function App() {
     }
   };
 
+  const generateScenario = async () => {
+    setScenarioLoading(true);
+    log('info', 'GEN_AI REQUEST → Generating AI Chaos Scenario');
+    try {
+      const r = await api('experiment/scenario', 'POST');
+      setScenarioReport(r.scenario);
+      toast('success', 'AI Scenario generated');
+      log('success', 'AI Scenario Planner returned a recommendation');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Scenario generation failed: ${e.message}`);
+    } finally {
+      setScenarioLoading(false);
+    }
+  };
+
   const setParam = (fault, key, val) => setParams(p => ({ ...p, [fault]: { ...p[fault], [key]: val } }));
 
   const appSvcs = services.filter(s => !['prometheus', 'grafana'].includes(s.service));
@@ -244,6 +262,18 @@ function App() {
                 <span className="target-port">{Object.values(s.ports||{}).filter(Boolean)[0] || '—'}</span>
               </button>
             ))}
+          </div>
+
+          {/* AI Scenario Planner */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">AI SCENARIO PLANNER</div>
+            <p className="scenario-desc">Let Gemini analyze your architecture and suggest what to break next.</p>
+            <button className="btn-scenario" onClick={generateScenario} disabled={scenarioLoading}>
+              {scenarioLoading ? '⏳ Thinking...' : scenarioReport ? '🔄 Regenerate' : '🧠 Generate Scenario'}
+            </button>
+            {scenarioReport && (
+              <div className="scenario-report" dangerouslySetInnerHTML={{ __html: renderMarkdown(scenarioReport) }} />
+            )}
           </div>
         </aside>
 
