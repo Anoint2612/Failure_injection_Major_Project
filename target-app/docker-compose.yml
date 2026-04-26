@@ -31,6 +31,16 @@ services:
       - NET_ADMIN
     privileged: true
 
+  orders-service:
+    build: ./orders-service
+    ports:
+      - "8003:8003"
+    networks:
+      - test-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
   prometheus:
     image: prom/prometheus
     volumes:
