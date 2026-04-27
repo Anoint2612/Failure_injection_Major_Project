@@ -1,0 +1,66 @@
+[
+  {
+    "label": "Latency 500ms",
+    "score": 0,
+    "mttd_component": 0.2,
+    "mttr_component": 0.1,
+    "availability_component": 3.0,
+    "degradation_penalty": 77.4
+  },
+  {
+    "label": "Latency 1000ms",
+    "score": 0,
+    "mttd_component": 0.11,
+    "mttr_component": 0.14,
+    "availability_component": 3.0,
+    "degradation_penalty": 195.3
+  },
+  {
+    "label": "Latency 2000ms",
+    "score": 0,
+    "mttd_component": 0.06,
+    "mttr_component": 0.14,
+    "availability_component": 3.0,
+    "degradation_penalty": 335.08
+  },
+  {
+    "label": "Latency 3000ms",
+    "score": 0,
+    "mttd_component": 0.04,
+    "mttr_component": 0.1,
+    "availability_component": 3.0,
+    "degradation_penalty": 573.61
+  },
+  {
+    "label": "Latency 5000ms",
+    "score": 0,
+    "mttd_component": 0.05,
+    "mttr_component": 0.14,
+    "availability_component": 3.0,
+    "degradation_penalty": 452.83
+  },
+  {
+    "label": "CPU 1 worker(s)",
+    "score": 5.37,
+    "mttd_component": 2.5,
+    "mttr_component": 0.07,
+    "availability_component": 3.0,
+    "degradation_penalty": 0.2
+  },
+  {
+    "label": "CPU 2 worker(s)",
+    "score": 5.41,
+    "mttd_component": 2.5,
+    "mttr_component": 0.1,
+    "availability_component": 3.0,
+    "degradation_penalty": 0.18
+  },
+  {
+    "label": "CPU 4 worker(s)",
+    "score": 5.37,
+    "mttd_component": 2.5,
+    "mttr_component": 0.07,
+    "availability_component": 3.0,
+    "degradation_penalty": 0.19
+  }
+]

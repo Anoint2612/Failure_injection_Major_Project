@@ -1,0 +1,32 @@
+[
+  {
+    "mttd": 0.0,
+    "mttr": 4.311,
+    "degradation": 0.13,
+    "availability": 1.0,
+    "avg_baseline_s": 0.0181,
+    "avg_during_s": 0.0157,
+    "avg_recovery_s": 0.1654,
+    "cpu_workers": 1
+  },
+  {
+    "mttd": 0.0,
+    "mttr": 3.151,
+    "degradation": 0.1214,
+    "availability": 1.0,
+    "avg_baseline_s": 0.0186,
+    "avg_during_s": 0.0164,
+    "avg_recovery_s": 0.0183,
+    "cpu_workers": 2
+  },
+  {
+    "mttd": 0.0,
+    "mttr": 4.379,
+    "degradation": 0.1298,
+    "availability": 1.0,
+    "avg_baseline_s": 0.0178,
+    "avg_during_s": 0.0156,
+    "avg_recovery_s": 0.0202,
+    "cpu_workers": 4
+  }
+]

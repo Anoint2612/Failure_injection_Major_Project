@@ -136,5 +136,535 @@
         "test_type": "latency",
         "source": "experiment",
         "timestamp": "2026-04-24T14:43:50.377018+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "3000"
+        },
+        "result": {
+            "action": "Added 3000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:22:13.989457+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:22:58.297990+00:00"
+    },
+    {
+        "baseline": [
+            {
+                "request": 1,
+                "latency": 0.064,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.016,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.014,
+                "status": 200
+            }
+        ],
+        "during_fault": [
+            {
+                "request": 1,
+                "latency": 6.034,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 7.734,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 6.031,
+                "status": 200
+            }
+        ],
+        "post_recovery": [
+            {
+                "request": 1,
+                "latency": 0.033,
+                "status": 200
+            },
+            {
+                "request": 2,
+                "latency": 0.022,
+                "status": 200
+            },
+            {
+                "request": 3,
+                "latency": 0.019,
+                "status": 200
+            }
+        ],
+        "config": {
+            "target_service": "auth-service",
+            "probe_url": "http://localhost:8000/dashboard",
+            "delay_ms": 3000,
+            "num_requests": 3
+        },
+        "test_type": "latency",
+        "source": "experiment",
+        "timestamp": "2026-04-27T16:23:33.673878+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "500"
+        },
+        "result": {
+            "action": "Added 500ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:07.082895+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:12.337107+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "500"
+        },
+        "result": {
+            "action": "Added 500ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:19.963629+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:25.188713+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "500"
+        },
+        "result": {
+            "action": "Added 500ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:30.567783+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:35.811831+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "1000"
+        },
+        "result": {
+            "action": "Added 1000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:41.126151+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:53.664139+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "1000"
+        },
+        "result": {
+            "action": "Added 1000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:52:59.040293+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:53:09.286548+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "1000"
+        },
+        "result": {
+            "action": "Added 1000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:53:14.732436+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:53:27.329185+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "2000"
+        },
+        "result": {
+            "action": "Added 2000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:53:32.717260+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:53:55.267614+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "2000"
+        },
+        "result": {
+            "action": "Added 2000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:54:00.637487+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:54:20.872009+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "2000"
+        },
+        "result": {
+            "action": "Added 2000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:54:28.585755+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:54:48.825926+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "3000"
+        },
+        "result": {
+            "action": "Added 3000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:54:54.183132+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:55:26.791865+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "3000"
+        },
+        "result": {
+            "action": "Added 3000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:55:34.396487+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:56:07.001895+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "3000"
+        },
+        "result": {
+            "action": "Added 3000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:56:12.332673+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:56:44.911218+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "5000"
+        },
+        "result": {
+            "action": "Added 5000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:56:50.218424+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:57:17.766421+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "5000"
+        },
+        "result": {
+            "action": "Added 5000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:57:23.111154+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:57:50.633985+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "parameters": {
+            "delay_ms": "5000"
+        },
+        "result": {
+            "action": "Added 5000ms delay (jitter: 0ms) to target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:57:55.994522+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "latency",
+        "service": "auth-service",
+        "result": {
+            "action": "Removed network rules from target-app-auth-service-1"
+        },
+        "timestamp": "2026-04-27T16:58:23.434208+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "1",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (1 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:00:05.765014+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:00:40.109328+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "1",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (1 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:00:48.421379+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:01:20.409512+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "2",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (2 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:01:30.958243+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:02:05.309527+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "2",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (2 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:02:13.607942+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:02:47.927948+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "4",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (4 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:02:56.219779+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:03:30.580110+00:00"
+    },
+    {
+        "source": "manual_inject",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "parameters": {
+            "cpu": "4",
+            "timeout": "30"
+        },
+        "result": {
+            "action": "Injected CPU stress (4 workers, 30s) on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:03:41.256664+00:00"
+    },
+    {
+        "source": "manual_recover",
+        "fault_type": "cpu_stress",
+        "service": "data-service",
+        "result": {
+            "action": "Killed stress-ng on target-app-data-service-1"
+        },
+        "timestamp": "2026-04-27T17:04:15.637153+00:00"
     }
 ]
