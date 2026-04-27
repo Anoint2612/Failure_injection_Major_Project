@@ -36,9 +36,23 @@ function App() {
   const [scenarioReport, setScenarioReport] = useState(null);
   const [scenarioLoading, setScenarioLoading] = useState(false);
   const [probeUrl, setProbeUrl] = useState('');
+  const [bearerToken, setBearerToken] = useState('');
   const [params, setParams] = useState({});
   const [logs, setLogs] = useState([{ id: 0, ts: now(), type: 'info', msg: 'System initialized. Awaiting service discovery.' }]);
   const [toasts, setToasts] = useState([]);
+  // New AI feature states
+  const [autopilotData, setAutopilotData] = useState(null);
+  const [autopilotLoading, setAutopilotLoading] = useState(false);
+  const [compareReport, setCompareReport] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [predictReport, setPredictReport] = useState(null);
+  const [predictLoading, setPredictLoading] = useState(false);
+  const [adviseReport, setAdviseReport] = useState(null);
+  const [adviseLoading, setAdviseLoading] = useState(false);
+  const [summaryReport, setSummaryReport] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [activeFaults, setActiveFaults] = useState({});
+
   const poll = useRef(null);
 
   function now() { return new Date().toLocaleTimeString('en-US', { hour12: false }); }
@@ -95,7 +109,7 @@ function App() {
     const p = params[name] || {};
     const qs = Object.entries(p).filter(([,v]) => v !== '' && v !== undefined).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
     log('info', `INJECT ${name.toUpperCase()} → ${target}`);
-    try { const r = await api(`inject/${name}/${target}${qs ? '?' + qs : ''}`); toast('success', r.action); log('success', r.action); }
+    try { const r = await api(`inject/${name}/${target}${qs ? '?' + qs : ''}`); toast('success', r.action); log('success', r.action); setActiveFaults(prev => ({ ...prev, [`${target}:${name}`]: { target, fault_type: name, params: p } })); }
     catch (e) { toast('error', e.message); log('error', e.message); }
   };
 
@@ -105,6 +119,7 @@ function App() {
       const r = await api(`recover/${name}/${target}`);
       toast('success', r.action || 'Recovered');
       log('success', r.action || 'Recovered');
+      setActiveFaults(prev => { const n = { ...prev }; delete n[`${target}:${name}`]; return n; });
       // Reset parameters to defaults
       const fault = faults.find(f => f.name === name);
       if (fault) {
@@ -122,7 +137,7 @@ function App() {
     log('info', `EXPERIMENT ${type.toUpperCase()} → ${target} | probe: ${probeUrl}`);
     try {
       const r = await api('experiment/run', 'POST', {
-        target_service: target, probe_url: probeUrl, fault_type: type,
+        target_service: target, probe_url: probeUrl, fault_type: type, bearer_token: bearerToken || null,
         ...(params[type === 'latency' ? 'latency' : 'cpu_stress'] || {}), num_requests: 5,
       });
       setResults(r); toast('success', 'Experiment complete'); log('success', `Experiment ${type} completed on ${target}`);
@@ -162,6 +177,93 @@ function App() {
       setScenarioLoading(false);
     }
   };
+
+  // ── New AI Feature Handlers ────────────────────────
+  const runAutopilot = async () => {
+    setAutopilotLoading(true); setAutopilotData(null);
+    log('info', 'AI AUTO-PILOT → Generating test plan and executing...');
+    try {
+      const r = await api('experiment/autopilot', 'POST');
+      setAutopilotData(r);
+      toast('success', `Auto-Pilot complete: ${r.plan?.length || 0} tests executed`);
+      log('success', `Auto-Pilot completed ${r.plan?.length || 0} tests with AI report`);
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Auto-Pilot failed: ${e.message}`);
+    } finally {
+      setAutopilotLoading(false);
+    }
+  };
+
+  const runCompare = async () => {
+    setCompareLoading(true); setCompareReport(null);
+    log('info', 'GEN_AI REQUEST → Cross-run Trend Analysis');
+    try {
+      const r = await api('experiment/compare', 'POST');
+      setCompareReport(r.report);
+      toast('success', `Trend analysis complete (${r.experiment_count} experiments)`);
+      log('success', 'Trend analysis report generated');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Trend analysis failed: ${e.message}`);
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
+  const runPredict = async () => {
+    setPredictLoading(true); setPredictReport(null);
+    log('info', 'GEN_AI REQUEST → Pre-Flight Resilience Prediction');
+    try {
+      const r = await api('experiment/predict', 'GET');
+      setPredictReport(r.report);
+      toast('success', 'Pre-flight assessment complete');
+      log('success', 'Pre-flight resilience prediction generated');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Prediction failed: ${e.message}`);
+    } finally {
+      setPredictLoading(false);
+    }
+  };
+
+  const runAdvise = async (faultInfo) => {
+    setAdviseLoading(true); setAdviseReport(null);
+    log('info', `GEN_AI REQUEST → Live Advisory for ${faultInfo.fault_type} on ${faultInfo.target}`);
+    try {
+      const r = await api('experiment/advise', 'POST', {
+        target_service: faultInfo.target,
+        fault_type: faultInfo.fault_type,
+        params: faultInfo.params || {},
+      });
+      setAdviseReport(r.report);
+      toast('success', 'Live AI advisory received');
+      log('success', 'Live fault advisory generated');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Advisory failed: ${e.message}`);
+    } finally {
+      setAdviseLoading(false);
+    }
+  };
+
+  const runSummary = async () => {
+    setSummaryLoading(true); setSummaryReport(null);
+    log('info', 'GEN_AI REQUEST → Executive History Summary');
+    try {
+      const r = await api('experiment/summarize', 'POST');
+      setSummaryReport(r.report);
+      toast('success', `Executive summary generated (${r.experiment_count} experiments)`);
+      log('success', 'Executive history summary generated');
+    } catch (e) {
+      toast('error', e.message);
+      log('error', `Summary failed: ${e.message}`);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+
 
   const setParam = (fault, key, val) => setParams(p => ({ ...p, [fault]: { ...p[fault], [key]: val } }));
 
@@ -275,6 +377,29 @@ function App() {
               <div className="scenario-report" dangerouslySetInnerHTML={{ __html: renderMarkdown(scenarioReport) }} />
             )}
           </div>
+
+          {/* AI Auto-Pilot */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">🚀 AI AUTO-PILOT</div>
+            <p className="scenario-desc">AI generates tests, runs them automatically, and delivers a combined report.</p>
+            <button className="btn-scenario btn-autopilot" onClick={runAutopilot} disabled={autopilotLoading}>
+              {autopilotLoading ? '⏳ Running Tests...' : autopilotData ? '🔄 Re-Run Auto-Pilot' : '🚀 Launch Auto-Pilot'}
+            </button>
+          </div>
+
+          {/* Pre-Flight Check */}
+          <div className="sidebar-section">
+            <div className="sidebar-heading">🛡️ PRE-FLIGHT CHECK</div>
+            <p className="scenario-desc">AI predicts resilience weaknesses before you inject any faults.</p>
+            <button className="btn-scenario btn-predict" onClick={runPredict} disabled={predictLoading}>
+              {predictLoading ? '⏳ Analyzing...' : predictReport ? '🔄 Re-Assess' : '🛡️ Run Pre-Flight'}
+            </button>
+            {predictReport && (
+              <div className="scenario-report" dangerouslySetInnerHTML={{ __html: renderMarkdown(predictReport) }} />
+            )}
+          </div>
+
+
         </aside>
 
         {/* Content */}
@@ -300,6 +425,11 @@ function App() {
                       <div className="fc-actions">
                         <button className="btn-inject" onClick={() => inject(f.name)} disabled={!target}>Inject</button>
                         <button className="btn-recover" onClick={() => recover(f.name)} disabled={!target}>Recover</button>
+                        {activeFaults[`${target}:${f.name}`] && (
+                          <button className="btn-advise" onClick={() => runAdvise(activeFaults[`${target}:${f.name}`])} disabled={adviseLoading} title="Ask AI about this active fault">
+                            {adviseLoading ? '⏳' : '🧠'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -318,9 +448,13 @@ function App() {
               <div className="exp-config">
                 <div className="exp-field">
                   <label className="field-label">Probe URL</label>
-                  <input className="field-input" type="text" value={probeUrl} onChange={e => setProbeUrl(e.target.value)} placeholder="http://localhost:8000/dashboard" />
+                  <input className="field-input" type="text" value={probeUrl} onChange={e => setProbeUrl(e.target.value)} placeholder="http://localhost:8000/health" />
                 </div>
-                <p className="field-hint">Inject on a downstream service. Probe via an upstream endpoint that calls it to observe latency impact through the Docker network.</p>
+                <div style={{marginTop:'0.5rem'}}>
+                  <div className="ctrl-label" style={{marginBottom:'0.35rem'}}><span>Bearer Token (optional)</span></div>
+                  <input className="field-input" type="password" value={bearerToken} onChange={e => setBearerToken(e.target.value)} placeholder="Paste JWT/token if endpoints require auth" />
+                </div>
+                <p className="field-hint" style={{marginTop:'0.5rem'}}>Inject on a downstream service. Probe via an upstream endpoint that calls it to observe latency impact through the Docker network.</p>
                 <div className="exp-btns">
                   <button className="btn-exp btn-lat" onClick={() => experiment('latency')} disabled={runningType || !target}>
                     {runningType === 'latency' ? 'Running...' : 'Latency Test'}
@@ -328,59 +462,175 @@ function App() {
                   <button className="btn-exp btn-str" onClick={() => experiment('stress')} disabled={runningType || !target}>
                     {runningType === 'stress' ? 'Running...' : 'Stress Test'}
                   </button>
+                  <button className="btn-exp btn-pay" onClick={() => experiment('payload')} disabled={runningType || !target}>
+                    {runningType === 'payload' ? 'Running...' : 'Payload Suite'}
+                  </button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Results */}
-          {results && (
-            <section className="panel">
-              <div className="panel-header">
-                <h2>Experiment Results</h2>
-                {results.config && <span className="panel-tag">{results.config.target_service} &middot; {results.config.delay_ms ? `${results.config.delay_ms}ms delay` : `${results.config.cpu} CPU`}</span>}
+          {/* Cross-Run AI Tools */}
+          <section className="panel">
+            <div className="panel-header">
+              <h2>🤖 Platform Intelligence</h2>
+            </div>
+            <div className="ai-btn-group" style={{marginTop:'1rem'}}>
+              <button className="btn-ai btn-compare" onClick={runCompare} disabled={compareLoading}>
+                {compareLoading ? '⏳ Comparing...' : '📊 Trend Analysis'}
+              </button>
+              <button className="btn-ai btn-summary" onClick={runSummary} disabled={summaryLoading}>
+                {summaryLoading ? '⏳ Summarizing...' : '📋 Exec Summary'}
+              </button>
+            </div>
+            {compareReport && (
+              <div className="ai-report-content" style={{marginTop:'1rem',borderTop:'1px solid var(--border)',paddingTop:'1rem'}}>
+                <h3 style={{color:'var(--accent)',marginBottom:'0.5rem'}}>📊 Cross-Run Trend Analysis</h3>
+                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(compareReport) }} />
               </div>
-              <div className="phase-grid">
-                {[
-                  { key: 'baseline', label: 'BASELINE', cls: 'ph-base' },
-                  { key: 'during_fault', label: 'DURING FAULT', cls: 'ph-fault' },
-                  { key: 'post_recovery', label: 'POST RECOVERY', cls: 'ph-recov' },
-                ].map(({ key, label, cls }) => {
-                  const rows = results[key];
-                  if (!Array.isArray(rows)) return null;
-                  return (
-                    <div key={key} className={`phase-card ${cls}`}>
-                      <div className="ph-header">
-                        <span className="ph-label">{label}</span>
-                        <span className="ph-avg">{avgLatency(rows)}s avg</span>
-                      </div>
+            )}
+            {summaryReport && (
+              <div className="ai-report-content" style={{marginTop:'1rem',borderTop:'1px solid var(--border)',paddingTop:'1rem'}}>
+                <h3 style={{color:'var(--accent)',marginBottom:'0.5rem'}}>📋 Executive Summary</h3>
+                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(summaryReport) }} />
+              </div>
+            )}
+          </section>
+
+          {/* Results Modal */}
+          {results && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <div>
+                    <h2 style={{margin:0,fontSize:'1.4rem'}}>Experiment Results</h2>
+                    {results.config && <span className="panel-tag" style={{marginTop:'0.5rem',display:'inline-block'}}>{results.config.target_service} &middot; {results.config.test_type}</span>}
+                  </div>
+                  <button className="btn-close" onClick={() => { setResults(null); setAiReport(null); }}>×</button>
+                </div>
+
+                <div className="modal-body">
+                  {results.payload_results && (
+                    <div className="payload-grid" style={{marginBottom:'1.5rem'}}>
+                      <h3 style={{color:'var(--accent)',marginBottom:'0.5rem', fontSize:'1rem'}}>🔒 Security Vulnerability Scan</h3>
                       <table className="data-table">
-                        <thead><tr><th>REQ</th><th>LATENCY</th><th>STATUS</th></tr></thead>
+                        <thead><tr><th>PAYLOAD</th><th>TARGET / DESC</th><th>LATENCY (ms)</th><th>STATUS</th></tr></thead>
                         <tbody>
-                          {rows.map(r => (
-                            <tr key={r.request} className={r.status === 'timeout' ? 'row-err' : ''}>
-                              <td>{r.request}</td><td className="mono">{r.latency}s</td><td>{r.status}</td>
+                          {results.payload_results.map((r, i) => (
+                            <tr key={i} className={r.status === 'timeout_or_error' || String(r.status).startsWith('5') ? 'row-err' : ''}>
+                              <td>
+                                {r.payload_name}
+                                {r.request_body && (
+                                  <details style={{marginTop:'0.5rem', cursor:'pointer', fontSize:'0.85rem'}}>
+                                    <summary style={{color:'var(--accent)'}}>View Payload</summary>
+                                    <pre style={{marginTop:'0.25rem', padding:'0.5rem', background:'var(--bg-card)', borderRadius:'4px', overflowX:'auto', maxWidth:'300px'}}>
+                                      {typeof r.request_body === 'object' ? JSON.stringify(r.request_body, null, 2) : r.request_body}
+                                    </pre>
+                                  </details>
+                                )}
+                              </td>
+                              <td>{r.description}</td>
+                              <td className="mono">{r.latency}</td>
+                              <td>{r.status}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                  
+                  {results.baseline && (
+                    <div className="phase-grid" style={{marginBottom:'1.5rem'}}>
+                      {results.payload_results && <h3 style={{color:'var(--accent)',marginBottom:'0.5rem', gridColumn:'1/-1', fontSize:'1rem'}}>💥 Huge JSON Bombing Degradation</h3>}
+                      {[
+                        { key: 'baseline', label: 'BASELINE', cls: 'ph-base' },
+                        { key: 'during_fault', label: 'DURING FAULT', cls: 'ph-fault' },
+                        { key: 'post_recovery', label: 'POST RECOVERY', cls: 'ph-recov' },
+                      ].map(({ key, label, cls }) => {
+                        const rows = results[key];
+                        if (!Array.isArray(rows)) return null;
+                        return (
+                          <div key={key} className={`phase-card ${cls}`}>
+                            <div className="ph-header">
+                              <span className="ph-label">{label}</span>
+                              <span className="ph-avg">{avgLatency(rows)}s avg</span>
+                            </div>
+                            <table className="data-table">
+                              <thead><tr><th>REQ</th><th>LATENCY</th><th>STATUS</th></tr></thead>
+                              <tbody>
+                                {rows.map(r => (
+                                  <tr key={r.request} className={r.status === 'timeout' ? 'row-err' : ''}>
+                                    <td>{r.request}</td><td className="mono">{r.latency}s</td><td>{r.status}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-              {/* AI Analysis - inside results panel */}
-              <div className="ai-section">
-                <div className="panel-header">
-                  <h2>🤖 Gemini AI Remediation</h2>
-                  <button className="btn-ai" onClick={analyzeAI} disabled={aiLoading}>
-                    {aiLoading ? '⏳ Analyzing Telemetry...' : aiReport ? '🔄 Regenerate Analysis' : '✨ Generate AI Report'}
-                  </button>
+                  {/* AI Analysis Inside Modal */}
+                  <div className="ai-section" style={{background:'var(--bg-card)',padding:'1.2rem',borderRadius:'6px',border:'1px solid var(--border)'}}>
+                    <div className="panel-header" style={{marginBottom:'1rem',border:'none',padding:0}}>
+                      <h2 style={{fontSize:'1.2rem',margin:0}}>🤖 AI Explainability</h2>
+                      <button className="btn-ai" onClick={analyzeAI} disabled={aiLoading}>
+                        {aiLoading ? '⏳ Analyzing...' : aiReport ? '🔄 Regenerate' : '✨ Explain Results with AI'}
+                      </button>
+                    </div>
+                    {aiReport && (
+                      <div className="ai-report-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(aiReport) }} />
+                    )}
+                  </div>
                 </div>
-                {aiReport && (
-                  <div className="ai-report-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(aiReport) }} />
-                )}
               </div>
+            </div>
+          )}
+
+
+          {/* AI Live Advisory (shown when advise is active) */}
+          {adviseReport && (
+            <section className="panel panel-advise">
+              <div className="panel-header">
+                <h2>🚨 AI Live Advisory</h2>
+                <button className="btn-ai" onClick={() => setAdviseReport(null)}>✕ Dismiss</button>
+              </div>
+              <div className="ai-report-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(adviseReport) }} />
+            </section>
+          )}
+
+          {/* Auto-Pilot Results */}
+          {autopilotData && (
+            <section className="panel panel-autopilot">
+              <div className="panel-header">
+                <h2>🚀 Auto-Pilot Results</h2>
+                <span className="panel-tag">{autopilotData.plan?.length || 0} tests executed</span>
+              </div>
+              {/* Test Plan */}
+              <div className="autopilot-plan">
+                <h3 style={{color:'var(--accent)',marginBottom:'0.5rem'}}>AI-Generated Test Plan</h3>
+                <div className="plan-grid">
+                  {(autopilotData.plan || []).map((t, i) => (
+                    <div key={i} className={`plan-card severity-${t.severity}`}>
+                      <div className="plan-card-top">
+                        <span className="plan-num">Test {i + 1}</span>
+                        <span className={`plan-severity sev-${t.severity}`}>{t.severity}</span>
+                      </div>
+                      <div className="plan-target">{t.target_service}</div>
+                      <div className="plan-fault">{t.fault_type} {t.delay_ms ? `(${t.delay_ms}ms)` : t.cpu ? `(${t.cpu} CPU)` : ''}</div>
+                      <div className="plan-hypothesis">{t.hypothesis}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Combined Report */}
+              {autopilotData.report && (
+                <div className="ai-report-content" style={{marginTop:'1rem'}}>
+                  <h3 style={{color:'var(--accent)',marginBottom:'0.5rem'}}>Combined AI Assessment</h3>
+                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(autopilotData.report) }} />
+                </div>
+              )}
             </section>
           )}
 

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import injection, recovery, discovery, experiments, metrics
+from routers import contract_tests
 
 app = FastAPI(
     title="Chaos Controller",
@@ -30,6 +31,7 @@ app.include_router(recovery.router)
 app.include_router(discovery.router)
 app.include_router(experiments.router)
 app.include_router(metrics.router)
+app.include_router(contract_tests.router)
 
 @app.get("/api/health")
 def health():

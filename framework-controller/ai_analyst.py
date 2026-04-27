@@ -11,15 +11,22 @@ def analyze_results(data: dict) -> str:
     """Analyze experiment telemetry and return an SRE remediation report."""
     # The Prompt: This is the "Secret Sauce" for your research paper
     prompt = f"""
-    You are a Senior Site Reliability Engineer (SRE). 
-    I ran a chaos engineering experiment on a microservices system.
-    Here is the latency data collected during the failure:
+    You are a Senior Site Reliability Engineer (SRE) and Application Security Expert. 
+    I ran a chaos engineering or resilience experiment on a microservices system.
+    Here is the telemetry data collected during the experiment:
     {json.dumps(data)}
 
-    Please provide:
-    1. Root Cause Analysis: What happened to the user experience?
-    2. Resilience Score: (0-10) based on the recovery and latency.
-    3. Remediation: Suggest 2 specific technical improvements (e.g., timeouts, circuit breakers).
+    Based on the provided data, provide a VERY BRIEF and HIGHLY STRUCTURED markdown report exactly following this format:
+
+    ### 🎯 Resilience Rating
+    [Must be exactly one of: GOOD / NEEDS WORK / BAD]
+
+    ### 🔍 Executive Summary
+    [Exactly 2-3 sentences explaining what happened and why]
+
+    ### 🛠️ Key Findings & Remediation
+    - **[Short Issue Name]**: [1 sentence describing issue] -> **Fix**: [1 sentence technical fix]
+    - **[Short Issue Name]**: [1 sentence describing issue] -> **Fix**: [1 sentence technical fix]
     """
 
     models_to_try = [

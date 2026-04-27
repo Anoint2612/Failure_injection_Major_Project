@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml (ChaosController — Standalone)
+#
+# The ChaosController is framework-agnostic. It does NOT bundle or depend on
+# your target application. It discovers running containers via the Docker socket
+# and joins your app's network at runtime.
+#
+# ── Usage ─────────────────────────────────────────────────────────────────────
+#
+# Step 1: Start your target application however you normally do, e.g.:
+#   cd target-app && docker compose up -d
+#
+# Step 2: Find the network your app is running on:
+#   docker network ls
+#   # e.g. target-app_test-net
+#
+# Step 3: Start ChaosController and attach it to that network:
+#   TARGET_NETWORK=target-app_test-net docker compose up -d
+#
+# Step 4: Open the dashboard:
+#   http://localhost:5050
+#
+# ── Environment Variables ──────────────────────────────────────────────────────
+# TARGET_NETWORK  — Docker network to join (default: target-app_test-net)
+# GEMINI_API_KEY  — Gemini API key for AI features (from .env or env var)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  chaos-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chaos-controller:latest
+    container_name: chaos-controller
+    ports:
+      - "5050:5050"
+    volumes:
+      # REQUIRED: Docker socket access for container discovery & fault injection
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - target-net       # Joins your app's network so it can reach containers by name
+    restart: unless-stopped
+
+networks:
+  target-net:
+    external: true
+    # Set the actual network name via:  TARGET_NETWORK=my-app-net docker compose up
+    # Or override in .env:  TARGET_NETWORK=target-app_test-net
+    name: ${TARGET_NETWORK:-target-app_test-net}
+

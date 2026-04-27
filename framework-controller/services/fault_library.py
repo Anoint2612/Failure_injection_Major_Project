@@ -250,6 +250,54 @@ class DiskIoStressFault(FaultBase):
 
 
 # ═══════════════════════════════════════════════════════════
+#  APPLICATION & SYSTEM FAULTS
+# ═══════════════════════════════════════════════════════════
+
+class ClockSkewFault(FaultBase):
+    name = "clock_skew"
+    description = "Manipulate container system clock to simulate time drift"
+    category = "system"
+    parameters = [
+        {"name": "offset_seconds", "type": "range", "default": 300, "min": -86400, "max": 86400, "step": 60,
+         "description": "Seconds to shift the clock forward (positive) or backward (negative)"},
+    ]
+
+    def inject(self, container, offset_seconds=300, **params):
+        offset = int(offset_seconds)
+        sign = "-" if offset < 0 else "+"
+        secs = abs(offset)
+        # Note: changing time requires container to have SYS_TIME capability or be privileged
+        cmd = f"date -s '{sign}{secs} seconds'"
+        res = container.exec_run(cmd)
+        if res.exit_code != 0:
+             return {"action": f"Failed to adjust clock (needs privileged/SYS_TIME): {res.output.decode('utf-8').strip()}"}
+        return {"action": f"Adjusted clock by {offset_seconds}s on {container.name}"}
+
+    def recover(self, container, **params):
+        container.exec_run("ntpdate -u pool.ntp.org || hwclock --hctosys")
+        return {"action": f"Attempted clock reset on {container.name}"}
+
+
+class ProcessKillFault(FaultBase):
+    name = "process_kill"
+    description = "Kill a specific process inside the container"
+    category = "system"
+    parameters = [
+        {"name": "process_name", "type": "text", "default": "python", "description": "Exact process name to kill"},
+    ]
+
+    def inject(self, container, process_name="python", **params):
+        cmd = f"pkill -f '{process_name}'"
+        res = container.exec_run(cmd)
+        if res.exit_code != 0:
+            return {"action": f"Process '{process_name}' not found or could not be killed in {container.name}"}
+        return {"action": f"Killed process '{process_name}' in {container.name}"}
+
+    def recover(self, container, **params):
+        return {"action": f"Process kill fault completed on {container.name}. Manual restart may be needed if not supervised."}
+
+
+# ═══════════════════════════════════════════════════════════
 #  FAULT REGISTRY
 # ═══════════════════════════════════════════════════════════
 
@@ -269,6 +317,8 @@ def _register_defaults():
         CpuStressFault,
         MemoryStressFault,
         DiskIoStressFault,
+        ClockSkewFault,
+        ProcessKillFault,
     ]:
         instance = cls()
         _FAULT_REGISTRY[instance.name] = instance

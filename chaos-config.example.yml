@@ -1,0 +1,108 @@
+# chaos-config.example.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Copy this to chaos-config.yml in your repo root.
+# The chaos-runner CLI reads this file to know what to test.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "1.0"
+
+# Human-readable name for this project (appears in the report)
+project: "my-microservices-app"
+
+# ChaosController connection settings
+controller:
+  # URL of the running ChaosController instance.
+  # In CI, this is typically the container name on the shared Docker network.
+  # Locally, use http://localhost:5050
+  url: "http://localhost:5050"
+  # Maximum time (seconds) to wait for a single test to complete
+  timeout_seconds: 300
+
+# ─── Global Pass/Fail Thresholds ───────────────────────────────────────────
+# These apply across all tests. You can adjust per your SLOs.
+thresholds:
+  # Fail if latency DURING fault is >40% worse than baseline
+  latency_regression_percent: 40
+
+  # Fail if >5% of payload test cases return a 5xx response
+  max_5xx_rate_percent: 5
+
+  # Fail if ANY payload case causes a crash/timeout (0 = zero tolerance)
+  max_payload_crash_rate_percent: 0
+
+# ─── Service Definitions ────────────────────────────────────────────────────
+# List all services under test. The 'name' must match your Docker Compose
+# service name so the ChaosController can find and inject faults into it.
+services:
+  - name: api-gateway
+    # The URL that will be probed during experiments to measure latency impact
+    probe_url: "http://api-gateway:8000/health"
+    # Optional: OpenAPI spec URL for dynamic payload fuzzing
+    openapi_url: "http://api-gateway:8000/openapi.json"
+
+  - name: auth-service
+    probe_url: "http://auth-service:8001/health"
+    openapi_url: "http://auth-service:8001/openapi.json"
+    # Optional: load JWT from an environment variable (injected by CI secrets)
+    bearer_token_env: "TEST_JWT_TOKEN"
+
+  - name: data-service
+    probe_url: "http://data-service:8002/health"
+
+# ─── Test Suite ─────────────────────────────────────────────────────────────
+# Tests run SEQUENTIALLY in the order listed. Each test:
+#   - type: latency | stress | payload
+#   - target: must match a service name above
+#   - on_fail: block (fails the gate) | warn (logs warning but continues)
+tests:
+  # ── Latency Test: API Gateway ──────────────────────────────────────────
+  - id: "latency-api-gateway"
+    type: latency
+    target: api-gateway
+    params:
+      delay_ms: 3000        # Inject 3s of network delay
+      num_requests: 5       # Number of probe requests per phase
+    on_fail: block          # Block deployment if this fails
+
+  # ── CPU Stress: Auth Service ───────────────────────────────────────────
+  - id: "cpu-stress-auth"
+    type: stress
+    target: auth-service
+    params:
+      cpu: 2                # Number of CPU stress workers
+      stress_timeout: 20    # Duration of stress injection (seconds)
+      num_requests: 5
+    on_fail: block
+
+  # ── Payload Suite: API Gateway ─────────────────────────────────────────
+  # This runs TWO tests back-to-back:
+  #   1. OpenAPI-driven fuzzing (valid, malformed, SQLi, XSS, type confusion...)
+  #   2. 3-phase Huge JSON Bombing degradation test
+  - id: "payload-suite-api-gateway"
+    type: payload
+    target: api-gateway
+    params:
+      max_operations: 10           # Max OpenAPI endpoints to fuzz
+      max_cases_per_operation: 15  # Max test cases per endpoint
+    on_fail: block
+
+  # ── Optional: Warn-only packet loss test ──────────────────────────────
+  # This will log a warning if it fails but won't block deployment.
+  # - id: "packet-loss-data-service"
+  #   type: latency
+  #   target: data-service
+  #   params:
+  #     delay_ms: 1000
+  #     num_requests: 3
+  #   on_fail: warn
+
+# ─── Report Configuration ───────────────────────────────────────────────────
+report:
+  # Path for the human-readable HTML report (archive as a CI artifact)
+  output_path: "chaos-report.html"
+  # Path for the machine-readable JSON report (for dashboards / Slack alerts)
+  json_path: "chaos-report.json"
+  # Use Gemini AI for the executive production verdict
+  ai_summary: true
+  # Only 'block' failures will cause the gate to FAIL (and exit code 1)
+  fail_on: "block"

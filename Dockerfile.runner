@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+LABEL org.opencontainers.image.title="chaos-runner"
+LABEL org.opencontainers.image.description="CI/CD Resilience Gate CLI for ChaosController"
+
+WORKDIR /app
+
+# Copy only what's needed for the CLI package
+COPY chaos_runner/ ./chaos_runner/
+COPY pyproject.toml ./
+
+# Install the CLI and its dependencies
+RUN pip install --no-cache-dir -e .
+
+ENTRYPOINT ["chaos-runner"]
+CMD ["--help"]

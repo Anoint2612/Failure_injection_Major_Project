@@ -1,0 +1,145 @@
+name: Resilience Gate
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: resilience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resilience-gate:
+    name: 🔥 Resilience Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      TEST_JWT_TOKEN: ${{ secrets.TEST_JWT_TOKEN }}   # Optional: for auth-protected endpoints
+
+    steps:
+
+      # ── 1. Checkout ─────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python (for chaos-runner) ─────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # ── 3. Start Application + ChaosController (parallel) ───────────────
+      - name: Build & Start Application
+        run: |
+          docker compose -f target-app/docker-compose.yml up --build -d
+          echo "Application stack started."
+
+      - name: Start ChaosController
+        run: |
+          docker run -d \
+            --name chaos-controller-ci \
+            --network target-app_test-net \
+            -p 5050:5050 \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            chaos-controller:latest || \
+            docker run -d \
+              --name chaos-controller-ci \
+              --network host \
+              -p 5050:5050 \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+              ghcr.io/${{ github.repository_owner }}/chaos-controller:latest
+          echo "ChaosController started."
+
+      # ── 4. Install chaos-runner CLI ──────────────────────────────────────
+      - name: Install chaos-runner
+        run: |
+          pip install -e . --quiet
+          chaos-runner --version
+
+      # ── 5. Wait for services to be healthy ──────────────────────────────
+      - name: Wait for services
+        run: |
+          echo "Waiting for application and controller to be healthy..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Application healthy"
+              break
+            fi
+            echo "  Waiting for app... ($i/30)"
+            sleep 5
+          done
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:5050/status > /dev/null 2>&1; then
+              echo "✅ ChaosController healthy"
+              break
+            fi
+            echo "  Waiting for ChaosController... ($i/20)"
+            sleep 5
+          done
+
+      # ── 6. Validate the config ───────────────────────────────────────────
+      - name: Validate chaos config
+        run: chaos-runner validate --config chaos-config.yml
+
+      # ── 7. Run Resilience Gate ───────────────────────────────────────────
+      - name: Run Resilience Gate
+        run: |
+          chaos-runner run \
+            --config chaos-config.yml \
+            --controller-url http://localhost:5050
+        # exit code 1 = gate failed = step fails = workflow fails = PR blocked
+
+      # ── 8. Upload Report Artifacts ───────────────────────────────────────
+      - name: Upload Resilience Report
+        uses: actions/upload-artifact@v4
+        if: always()    # Upload even on failure so we can see WHY it failed
+        with:
+          name: chaos-resilience-report-${{ github.run_number }}
+          path: |
+            chaos-report.html
+            chaos-report.json
+          retention-days: 30
+
+      # ── 9. PR Comment with Summary (optional) ────────────────────────────
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '❓ Report not available';
+            try {
+              const report = JSON.parse(fs.readFileSync('chaos-report.json', 'utf8'));
+              const icon = report.overall === 'PASS' ? '✅' : '❌';
+              const rows = report.verdicts.map(v =>
+                `| ${v.test_id} | ${v.type} | ${v.target} | ${v.status} | ${v.reasons.join('; ') || '—'} |`
+              ).join('\n');
+              summary = `## ${icon} Resilience Gate: **${report.overall}**\n\n` +
+                `| Test | Type | Target | Status | Issues |\n` +
+                `|------|------|--------|--------|--------|\n` +
+                rows;
+            } catch(e) {
+              summary = '⚠️ Could not read resilience report: ' + e;
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      # ── 10. Cleanup ──────────────────────────────────────────────────────
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop chaos-controller-ci 2>/dev/null || true
+          docker rm chaos-controller-ci 2>/dev/null || true
+          docker compose -f target-app/docker-compose.yml down 2>/dev/null || true
