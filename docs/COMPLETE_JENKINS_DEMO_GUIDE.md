@@ -359,9 +359,18 @@ docker run -d \
 4. Open <http://localhost:8082> — the voting page should be noticeably slower
 5. Click **Recover** in the dashboard to fix it
 6. **Try a stress test** on the `vote` service — this should now work since `stress-ng` is installed
-7. **Run an experiment:** use `http://vote:80/` as the Probe URL (internal Docker name, NOT localhost)
+7. **Run an experiment:** When running an experiment, you must provide a **Probe URL**. When ChaosController runs inside Docker, it must use the internal container name to reach the voting app. 
 
-> **Important Probe URL Note:** When ChaosController runs inside Docker, it must use the internal container name to reach the voting app. Use `http://vote:80/` (not `http://localhost:8082`).
+   **Valid Probe URLs:**
+   - For the Vote service: `http://vote:80/`
+   - For the Result service: `http://result:80/`
+
+> **Why do `redis`, `db`, and `worker` show as "Down" in the dashboard?**
+> The ChaosController dashboard uses HTTP requests (like a web browser) to check if a service is healthy. 
+> - `redis` is a cache (port 6379)
+> - `db` is a PostgreSQL database (port 5432)
+> - `worker` is a background .NET process with no open ports
+> Since none of these run web servers, the HTTP health checks fail, and the dashboard marks them as "Down". This is **expected behavior** and they are still functioning correctly in the background. You should focus your chaos testing on the `vote` and `result` services.
 
 ### Step B5: Cleanup
 
