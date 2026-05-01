@@ -192,7 +192,7 @@ services:
   vote:
     build:
       context: ./vote
-      target: dev
+      target: final
     depends_on:
       redis:
         condition: service_healthy
@@ -202,8 +202,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    volumes:
-     - ./vote:/usr/local/app
     ports:
       - "8082:80"
     networks:
@@ -214,12 +212,9 @@ services:
 
   result:
     build: ./result
-    entrypoint: nodemon --inspect=0.0.0.0 server.js
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./result:/usr/local/app
     ports:
       - "8081:80"
     networks:
@@ -244,10 +239,8 @@ services:
 
   redis:
     image: redis:alpine
-    volumes:
-      - "./healthchecks:/healthchecks"
     healthcheck:
-      test: /healthchecks/redis.sh
+      test: ["CMD", "redis-cli", "ping"]
       interval: "5s"
     networks:
       - app-net
@@ -259,9 +252,8 @@ services:
       POSTGRES_PASSWORD: "postgres"
     volumes:
       - "db-data:/var/lib/postgresql/data"
-      - "./healthchecks:/healthchecks"
     healthcheck:
-      test: /healthchecks/postgres.sh
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: "5s"
     networks:
       - app-net
@@ -458,9 +450,16 @@ Copy the output string.
 
 ```bash
 docker exec -u root jenkins bash -c "
+  mkdir -p /usr/libexec/docker/cli-plugins
+  
+  # Install docker-compose
   curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
   chmod +x /usr/local/bin/docker-compose
   ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+  # Install docker-buildx plugin
+  curl -SL https://github.com/docker/buildx/releases/download/v0.33.0/buildx-v0.33.0.linux-amd64 -o /usr/libexec/docker/cli-plugins/docker-buildx
+  chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
 "
 ```
 
@@ -543,11 +542,12 @@ pipeline {
     agent any
 
     environment {
-        GEMINI_API_KEY   = credentials('gemini-api-key')
-        COMPOSE_FILE     = 'docker-compose.yml'
-        APP_NETWORK      = 'voting-app-chaos-demo_app-net'
-        CHAOS_IMAGE      = 'chaos-controller:latest'
-        CHAOS_CONTAINER  = 'chaos-controller-ci'
+        GEMINI_API_KEY       = credentials('gemini-api-key')
+        COMPOSE_PROJECT_NAME = 'voting-app-chaos-demo'
+        COMPOSE_FILE         = 'docker-compose.yml'
+        APP_NETWORK          = 'voting-app-chaos-demo_app-net'
+        CHAOS_IMAGE          = 'chaos-controller:latest'
+        CHAOS_CONTAINER      = 'chaos-controller-ci'
     }
 
     stages {
@@ -555,7 +555,7 @@ pipeline {
         stage('Build & Start Voting App') {
             steps {
                 echo '🔨 Building and starting the Voting App stack...'
-                sh "docker compose -f ${COMPOSE_FILE} up --build -d"
+                sh "docker-compose -f ${COMPOSE_FILE} up --build -d"
                 echo '✅ Voting App is building...'
             }
         }
@@ -573,9 +573,12 @@ pipeline {
                         -e GEMINI_API_KEY=${GEMINI_API_KEY} \
                         ${CHAOS_IMAGE}
                 """
+                // Connect Jenkins container to the app network so it can reach
+                // ChaosController and voting app services by container name
+                sh "docker network connect ${APP_NETWORK} jenkins || true"
                 sh '''
                     for i in $(seq 1 30); do
-                        curl -sf http://localhost:5050/status > /dev/null && echo "ChaosController ready!" && exit 0
+                        curl -sf http://chaos-controller-ci:5050/status > /dev/null && echo "ChaosController ready!" && exit 0
                         echo "Waiting for ChaosController... ($i/30)"
                         sleep 5
                     done
@@ -590,7 +593,7 @@ pipeline {
                 echo '🏥 Verifying all services are healthy...'
                 sh '''
                     for i in $(seq 1 20); do
-                        curl -sf http://localhost:8082 > /dev/null && echo "Vote app healthy!" && exit 0
+                        curl -sf http://voting-app-chaos-demo-vote-1:80 > /dev/null && echo "Vote app healthy!" && exit 0
                         echo "Waiting for Vote app... ($i/20)"
                         sleep 5
                     done
@@ -649,7 +652,7 @@ pipeline {
             echo '🧹 Cleaning up...'
             sh "docker stop ${CHAOS_CONTAINER} 2>/dev/null || true"
             sh "docker rm ${CHAOS_CONTAINER} 2>/dev/null || true"
-            sh "docker compose -f ${COMPOSE_FILE} down 2>/dev/null || true"
+            sh "docker-compose -f ${COMPOSE_FILE} down 2>/dev/null || true"
         }
         failure {
             echo '❌ Pipeline failed or was rejected.'
