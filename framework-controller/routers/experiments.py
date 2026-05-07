@@ -170,10 +170,10 @@ def _build_probe_url(target_service: str) -> str:
         if svc["name"] == target_service:
             if is_docker:
                 internal_port = list(svc["ports"].keys())[0].split("/")[0] if svc.get("ports") else "8000"
-                return f"http://{svc['container_name']}:{internal_port}/health"
+                return f"http://{svc['container_name']}:{internal_port}/"
             else:
                 host_port = list(svc["ports"].values())[0] if svc.get("ports") else "8000"
-                return f"http://localhost:{host_port}/health"
+                return f"http://localhost:{host_port}/"
     # Fallback: use api-gateway on common port
     return "http://localhost:8000/health"
 
@@ -313,23 +313,31 @@ async def predict_resilience():
     architecture = _get_architecture()
 
     # Gather live health status
+    is_docker = os.path.exists("/.dockerenv")
     services = discover_services()
     live_status = []
     for svc in services:
         host_port = None
+        internal_port = None
         for cp, mp in svc["ports"].items():
+            internal_port = int(cp.split("/")[0])
             if mp:
                 host_port = int(mp)
-                break
+            break
         status_info = {
             "service": svc["name"],
             "container_name": svc["container_name"],
             "status": svc["status"],
             "ports": svc["ports"],
         }
-        if host_port and svc["status"] == "running":
+        if svc["status"] == "running":
             try:
-                health = await check_health("localhost", host_port)
+                if is_docker and internal_port:
+                    health = await check_health(svc["container_name"], internal_port, path="/")
+                elif host_port:
+                    health = await check_health("localhost", host_port, path="/")
+                else:
+                    raise Exception("No reachable port")
                 status_info.update(health)
             except Exception:
                 status_info["health"] = "unknown"
