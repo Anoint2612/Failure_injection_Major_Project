@@ -43,8 +43,9 @@ services:
 
   prometheus:
     image: prom/prometheus
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    # No bind-mounts: host Docker daemon resolves paths from host FS,
+    # not from inside the Jenkins container, so file mounts break in CI.
+    # Prometheus starts with its built-in default config (still reachable at :9090).
     ports:
       - "9090:9090"
     networks:
@@ -59,10 +60,7 @@ services:
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-    volumes:
-      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    # No bind-mounts for same reason as prometheus above.
 
 networks:
   test-net:
